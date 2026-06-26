@@ -1,26 +1,146 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --inline-sans: var(--font-geist);
+  --font-pixels: var(--font-press-start);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@theme {
+  --color-void: #0b1020;
+  --color-night: #11182b;
+  --color-panel: #1a2340;
+  --color-panel-deep: #131b31;
+  --color-panel-muted: #24304f;
+
+  --color-cream: #f8edcf;
+  --color-cream-muted: #c8b994;
+
+  --color-amber: #f4b942;
+  --color-amber-light: #ffd978;
+  --color-amber-dark: #b76c1b;
+
+  --color-moss: #6fa85a;
+  --color-moss-light: #9ed37d;
+  --color-moss-dark: #3f6c3a;
+
+  --color-wine: #8e3b46;
+  --color-wine-light: #bd5962;
+  --color-wine-dark: #54242d;
+
+  --color-danger: #dc5454;
+  --color-success: #7bc96f;
+  --color-info: #65b8d8;
+
+  --color-outline: #080b12;
+  --color-outline-soft: #34415f;
+
+  --shadow-pixel-sm: 2px 2px 0 rgb(0 0 0 / 0.65);
+  --shadow-pixel: 4px 4px 0 rgb(0 0 0 / 0.7);
+  --shadow-pixel-lg: 7px 7px 0 rgb(0 0 0 / 0.75);
+
+  --animate-lantern-flicker: lantern-flicker 2.8s ease-in-out infinite;
+
+  @keyframes lantern-flicker {
+    0%,
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    45% {
+      opacity: 0.92;
+      transform: translateY(1px);
+    }
+
+    50% {
+      opacity: 0.82;
+      transform: translateY(0);
+    }
+
+    55% {
+      opacity: 0.96;
+      transform: translateY(-1px);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-height: 100%;
+    background: var(--color-void);
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    background-color: var(--color-void);
+    background-image:
+      linear-gradient(
+        rgb(255 255 255 / 0.025) 1px,
+        transparent 1px
+      ),
+      linear-gradient (
+        90deg,
+        rgb(255 255 255 / 0.025) 1px,
+        transparent 1px
+      ),
+      radial-gradient(
+        circle at top,
+        rgb(93 122 180 / 0.16),
+        transparent 38rem
+      );
+    transparent-position: center;
+    background-size:
+      16px 16px,
+      16px 16px,
+      auto;
+    color: var(--color-cream);
+    font-family: var(--font-geist), Arial, sans-serif;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  ::selection {
+    background: var(--color-amber);
+    color: var(--color-void);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-amber-light);
+    outline-offset: 3px;
+  }
+}
+
+@utility pixel-grid {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+@utility pixel-inset {
+  box-shadow:
+    inset 2px 2px 0 rgb(0 0 0 / 0.35),
+    inset -2px -2px 0 rgb(255 255 255 / 0.035);
 }
