@@ -1,15 +1,14 @@
-import { AuthenticatedHeader } from "@/components/layout/authenticated-header";
+import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/features/auth/auth-guard";
 
 export default function ProtectedLayout({
-    children,
+  children,
 }: Readonly<{
-    children: React.ReactNode;
+  children: React.ReactNode;
 }>) {
-    return (
-        <AuthGuard>
-            <AuthenticatedHeader />
-            {children}
-        </AuthGuard>
-    );
+  return (
+    <AuthGuard>
+      <AppShell>{children}</AppShell>
+    </AuthGuard>
+  );
 }
