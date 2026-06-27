@@ -1,7 +1,5 @@
-import { CalendarDays } from "lucide-react";
-
-import { FeatureNotice } from "@/components/shared/feature-notice";
 import { PageShell } from "@/components/shared/page-shell";
+import { SessionOverview } from "@/features/sessions/session-overview";
 
 export const metadata = {
   title: "Sessions",
@@ -10,17 +8,11 @@ export const metadata = {
 export default function SessionsPage() {
   return (
     <PageShell
-      description="Přehled minulých, aktivních a připravovaných game nights."
+      description="Naplánuj game night, potvrď účast a sleduj, kdo bude sedět u stolu."
       eyebrow="GAME NIGHT PLANNER"
       title="Sessions"
     >
-      <FeatureNotice
-        description="Tady budou nadcházející session, RSVP jednotlivých členů, hostitel, místo, plánované hry, útraty i historie hodů kostkou."
-        eyebrow="SESSION CHAMBER"
-        icon={CalendarDays}
-        nextStep="Vytvoříme Firestore model session, bezpečnostní pravidla, realtime seznam a formulář pro vytvoření první session."
-        title="Session místnost je připravená"
-      />
+      <SessionOverview />
     </PageShell>
   );
 }

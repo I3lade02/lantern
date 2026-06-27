@@ -92,6 +92,226 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    function hasValidRsvpSummary(summary) {
+      return summary is map
+        && summary.keys().hasAll(["going", "maybe", "notGoing"])
+        && summary.keys().hasOnly(["going", "maybe", "notGoing"])
+        && summary.going is int
+        && summary.maybe is int
+        && summary.notGoing is int
+        && summary.going >= 0
+        && summary.maybe >= 0
+        && summary.notGoing >= 0;
+    }
+
+    function hasValidSessionShape(data) {
+      return data.keys().hasAll([
+          "id",
+          "title",
+          "description",
+          "startAt",
+          "location",
+          "hostId",
+          "hostName",
+          "status",
+          "rsvpSummary",
+          "plannedGameIds",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.keys().hasOnly([
+          "id",
+          "title",
+          "description",
+          "startAt",
+          "location",
+          "hostId",
+          "hostName",
+          "status",
+          "rsvpSummary",
+          "plannedGameIds",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.id is string
+        && data.title is string
+        && data.title.size() >= 3
+        && data.title.size() <= 80
+        && data.description is string
+        && data.description.size() <= 1000
+        && data.startAt is timestamp
+        && data.location is string
+        && data.location.size() >= 2
+        && data.location.size() <= 120
+        && data.hostId is string
+        && data.hostId.size() > 0
+        && data.hostName is string
+        && data.hostName.size() >= 2
+        && data.hostName.size() <= 24
+        && data.status in ["upcoming", "active", "finished", "cancelled"]
+        && hasValidRsvpSummary(data.rsvpSummary)
+        && data.plannedGameIds is list
+        && data.plannedGameIds.size() <= 50
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSessionCreate(sessionId) {
+      return isAdmin()
+        && hasValidSessionShape(request.resource.data)
+        && request.resource.data.id == sessionId
+        && request.resource.data.rsvpSummary.going == 0
+        && request.resource.data.rsvpSummary.maybe == 0
+        && request.resource.data.rsvpSummary.notGoing == 0
+        && request.resource.data.plannedGameIds.size() == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function isValidAdminSessionUpdate(sessionId) {
+      return isAdmin()
+        && hasValidSessionShape(request.resource.data)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.id == sessionId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function hasValidRsvpShape(data, userId) {
+      return data.keys().hasAll([
+          "userId",
+          "userName",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.keys().hasOnly([
+          "userId",
+          "userName",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.userId == userId
+        && data.userName is string
+        && data.userName.size() >= 2
+        && data.userName.size() <= 24
+        && data.status in ["going", "maybe", "notGoing"]
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function currentRsvpStatus(sessionId, userId) {
+      return exists(
+        /databases/$(database)/documents/sessions/$(sessionId)/rsvps/$(userId)
+      )
+        ? get(
+            /databases/$(database)/documents/sessions/$(sessionId)/rsvps/$(userId)
+          ).data.status
+        : "none";
+    }
+
+    function statusDelta(oldStatus, newStatus, targetStatus) {
+      return (
+        (newStatus == targetStatus ? 1 : 0)
+        - (oldStatus == targetStatus ? 1 : 0)
+      );
+    }
+
+    function isValidRsvpTransaction(sessionId, userId) {
+      let sessionPath =
+        /databases/$(database)/documents/sessions/$(sessionId);
+
+      let rsvpPath =
+        /databases/$(database)/documents/sessions/$(sessionId)/rsvps/$(userId);
+
+      let beforeSession = get(sessionPath).data;
+      let afterSession = getAfter(sessionPath).data;
+
+      let previousStatus = currentRsvpStatus(sessionId, userId);
+      let nextStatus = getAfter(rsvpPath).data.status;
+
+      return hasValidSessionShape(afterSession)
+        && afterSession.id == sessionId
+        && afterSession.diff(beforeSession).affectedKeys().hasOnly([
+          "rsvpSummary",
+          "updatedAt"
+        ])
+        && afterSession.updatedAt == request.time
+        && getAfter(rsvpPath).data.userId == userId
+        && getAfter(rsvpPath).data.updatedAt == request.time
+        && afterSession.rsvpSummary.going
+          == beforeSession.rsvpSummary.going
+            + statusDelta(previousStatus, nextStatus, "going")
+        && afterSession.rsvpSummary.maybe
+          == beforeSession.rsvpSummary.maybe
+            + statusDelta(previousStatus, nextStatus, "maybe")
+        && afterSession.rsvpSummary.notGoing
+          == beforeSession.rsvpSummary.notGoing
+            + statusDelta(previousStatus, nextStatus, "notGoing");
+    }
+
+    function isValidRsvpCreate(sessionId, userId) {
+      return hasApprovedEmail()
+        && request.auth.uid == userId
+        && hasValidRsvpShape(request.resource.data, userId)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && isValidRsvpTransaction(sessionId, userId);
+    }
+
+    function isValidRsvpUpdate(sessionId, userId) {
+      return hasApprovedEmail()
+        && request.auth.uid == userId
+        && hasValidRsvpShape(request.resource.data, userId)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && isValidRsvpTransaction(sessionId, userId);
+    }
+
+    function hasValidActivityShape(data) {
+      return data.keys().hasAll([
+          "id",
+          "type",
+          "actorId",
+          "actorName",
+          "message",
+          "sessionId",
+          "createdAt"
+        ])
+        && data.keys().hasOnly([
+          "id",
+          "type",
+          "actorId",
+          "actorName",
+          "message",
+          "sessionId",
+          "createdAt"
+        ])
+        && data.id is string
+        && data.type in [
+          "session_created",
+          "session_updated",
+          "session_rsvp",
+          "expense_created",
+          "expense_updated",
+          "debt_paid",
+          "dice_rolled",
+          "game_added",
+          "member_joined",
+          "other"
+        ]
+        && data.actorId == request.auth.uid
+        && data.actorName is string
+        && data.actorName.size() >= 2
+        && data.actorName.size() <= 24
+        && data.message is string
+        && data.message.size() >= 1
+        && data.message.size() <= 240
+        && (data.sessionId == null || data.sessionId is string)
+        && data.createdAt is timestamp;
+    }
+
     match /users/{userId} {
       allow get, list: if hasApprovedEmail();
 
@@ -108,8 +328,49 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Budoucí kolekce jsou nyní schválně zamčené.
-    // Otevřeme je až s konkrétní implementací dané funkce.
+    match /sessions/{sessionId} {
+      allow get, list: if hasApprovedEmail();
+
+      allow create: if isValidSessionCreate(sessionId);
+
+      allow update: if isValidAdminSessionUpdate(sessionId)
+        || (
+          hasApprovedEmail()
+          && isValidRsvpTransaction(sessionId, request.auth.uid)
+        );
+
+      allow delete: if isAdmin();
+
+      match /rsvps/{userId} {
+        allow get, list: if hasApprovedEmail();
+
+        allow create: if isValidRsvpCreate(sessionId, userId);
+
+        allow update: if isValidRsvpUpdate(sessionId, userId);
+
+        allow delete: if false;
+      }
+    }
+
+    match /activityLog/{activityId} {
+      allow get, list: if hasApprovedEmail();
+
+      allow create: if hasApprovedEmail()
+        && hasValidActivityShape(request.resource.data)
+        && request.resource.data.id == activityId
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    match /debts/{debtId} {
+      allow get, list: if hasApprovedEmail();
+    }
+
+    match /appSettings/{settingsId} {
+      allow get: if hasApprovedEmail();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
