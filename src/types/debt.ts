@@ -11,6 +11,7 @@ export type DebtStatus = (typeof DEBT_STATUSES)[number];
 
 export type Debt = {
   id: string;
+
   settlementId: string;
   sessionId: string;
   sessionTitle: string;
@@ -32,4 +33,6 @@ export type Debt = {
   settledAt: Timestamp | null;
   settledById: string | null;
   settledByName: string | null;
+
+  paymentId?: string | null;
 };

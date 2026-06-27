@@ -6,15 +6,18 @@ import {
   ArrowUpRight,
   HandCoins,
   RefreshCw,
+  Settings2,
 } from "lucide-react";
 
 import { LoadingState } from "@/components/ui/loading-state";
-import { PixelPanel } from "@/components/ui/pixel-panel";
 import { PixelButton } from "@/components/ui/pixel-button";
+import { PixelPanel } from "@/components/ui/pixel-panel";
 import { useAuth } from "@/features/auth/auth-provider";
 import { DebtList } from "@/features/debts/debt-list";
 import { SettlementBuilder } from "@/features/debts/settlement-builder";
 import { useDebts } from "@/features/debts/use-debts";
+import { PaymentSettingsModal } from "@/features/payments/payment-settings-modal";
+import { useAppSettings } from "@/features/payments/use-app-settings";
 import { useSessions } from "@/features/sessions/use-sessions";
 import { formatCzkFromCents } from "@/lib/money";
 
@@ -39,7 +42,14 @@ export function DebtOverview() {
     isLoading: areSessionsLoading,
   } = useSessions(profileStatus === "ready");
 
+  const {
+    settings,
+    isLoading: areSettingsLoading,
+    error: settingsError,
+  } = useAppSettings(profileStatus === "ready");
+
   const [sessionFilter, setSessionFilter] = useState("all");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const isAdmin = profile?.role === "admin";
 
@@ -69,7 +79,8 @@ export function DebtOverview() {
   const resolvedDebts = useMemo(
     () =>
       filteredDebts.filter(
-        (debt) => debt.status === "paid" || debt.status === "forgiven",
+        (debt) =>
+          debt.status === "paid" || debt.status === "forgiven",
       ),
     [filteredDebts],
   );
@@ -96,11 +107,15 @@ export function DebtOverview() {
     0,
   );
 
-  if (areDebtsLoading || areSessionsLoading) {
+  if (
+    areDebtsLoading ||
+    areSessionsLoading ||
+    areSettingsLoading
+  ) {
     return <LoadingState label="Načítám vyrovnání party…" />;
   }
 
-  if (debtsError) {
+  if (debtsError || settingsError) {
     return (
       <PixelPanel className="max-w-2xl" padding="lg">
         <p className="font-pixel text-[10px] leading-5 text-wine-light">
@@ -108,11 +123,11 @@ export function DebtOverview() {
         </p>
 
         <h2 className="mt-3 font-pixel text-sm leading-8 text-cream">
-          Dluhy se nepodařilo načíst
+          Data se nepodařilo načíst
         </h2>
 
         <p className="mt-3 text-sm leading-6 text-cream-muted">
-          {debtsError}
+          {debtsError ?? settingsError}
         </p>
 
         <PixelButton
@@ -146,28 +161,42 @@ export function DebtOverview() {
             </p>
           </div>
 
-          <div className="grid min-w-64 gap-2">
-            <label
-              className="font-pixel text-[8px] leading-4 text-cream-muted"
-              htmlFor="debt-session-filter"
-            >
-              FILTR SESSION
-            </label>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="grid min-w-64 gap-2">
+              <label
+                className="font-pixel text-[8px] leading-4 text-cream-muted"
+                htmlFor="debt-session-filter"
+              >
+                FILTR SESSION
+              </label>
 
-            <select
-              className="w-full border-2 border-outline bg-panel px-3 py-3 text-sm text-cream shadow-[inset_2px_2px_0_rgb(0_0_0/0.35)] focus:border-amber focus:outline-none"
-              id="debt-session-filter"
-              onChange={(event) => setSessionFilter(event.target.value)}
-              value={sessionFilter}
-            >
-              <option value="all">Všechny session</option>
+              <select
+                className="w-full border-2 border-outline bg-panel px-3 py-3 text-sm text-cream shadow-[inset_2px_2px_0_rgb(0_0_0/0.35)] focus:border-amber focus:outline-none"
+                id="debt-session-filter"
+                onChange={(event) =>
+                  setSessionFilter(event.target.value)
+                }
+                value={sessionFilter}
+              >
+                <option value="all">Všechny session</option>
 
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.title}
-                </option>
-              ))}
-            </select>
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {isAdmin ? (
+              <PixelButton
+                onClick={() => setIsSettingsOpen(true)}
+                variant="amber"
+              >
+                <Settings2 aria-hidden="true" size={16} />
+                QR nastavení
+              </PixelButton>
+            ) : null}
           </div>
         </div>
       </PixelPanel>
@@ -237,6 +266,7 @@ export function DebtOverview() {
           emptyDescription="Zatím nebyl vytvořen žádný otevřený dluh. Admin může nejprve spočítat settlement z útrat konkrétní session."
           emptyTitle="Žádné otevřené dluhy"
           isAdmin={isAdmin}
+          settings={settings}
         />
       </section>
 
@@ -257,6 +287,7 @@ export function DebtOverview() {
           emptyDescription="Jakmile admin označí některý převod jako zaplacený nebo odpuštěný, zůstane jeho stopa zde."
           emptyTitle="Historie je zatím prázdná"
           isAdmin={isAdmin}
+          settings={settings}
         />
       </section>
 
@@ -268,12 +299,18 @@ export function DebtOverview() {
             </div>
 
             <p className="text-sm leading-6 text-cream-muted">
-              Výpočet settlementu a potvrzení vyřešených dluhů spravuje admin
-              party. V příštím kroku přidáme QR platby a možnost označit vlastní
-              dluh jako zaplacený.
+              U vlastního otevřeného dluhu můžeš použít QR platbu. Po označení
+              platby jako odeslané ji admin ručně potvrdí.
             </p>
           </div>
         </PixelPanel>
+      ) : null}
+
+      {isAdmin && isSettingsOpen ? (
+        <PaymentSettingsModal
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+        />
       ) : null}
     </div>
   );

@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, HeartHandshake } from "lucide-react";
+import {
+  BadgeCheck,
+  HeartHandshake,
+} from "lucide-react";
 
 import { PixelButton } from "@/components/ui/pixel-button";
 import { PixelModal } from "@/components/ui/pixel-modal";
@@ -25,8 +28,20 @@ export function DebtResolutionActions({
   debt,
   actor,
 }: DebtResolutionActionsProps) {
-  const [resolution, setResolution] = useState<Resolution | null>(null);
+  const [resolution, setResolution] =
+    useState<Resolution | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isOpen =
+    debt.status === "open" || debt.status === "pending";
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const isPendingConfirmation = debt.status === "pending";
+  const isPaid = resolution === "paid";
 
   async function handleConfirm() {
     if (!resolution) {
@@ -52,14 +67,6 @@ export function DebtResolutionActions({
     }
   }
 
-  const isOpen = debt.status === "open" || debt.status === "pending";
-
-  if (!isOpen) {
-    return null;
-  }
-
-  const isPaid = resolution === "paid";
-
   return (
     <>
       <div className="flex flex-wrap gap-2">
@@ -70,7 +77,9 @@ export function DebtResolutionActions({
           variant="moss"
         >
           <BadgeCheck aria-hidden="true" size={15} />
-          Zaplaceno
+          {isPendingConfirmation
+            ? "Potvrdit platbu"
+            : "Zaplaceno"}
         </PixelButton>
 
         <PixelButton
@@ -89,7 +98,13 @@ export function DebtResolutionActions({
         onClose={() => setResolution(null)}
         open={resolution !== null}
         size="sm"
-        title={isPaid ? "Označit jako zaplacené?" : "Odpustit dluh?"}
+        title={
+          isPaid
+            ? isPendingConfirmation
+              ? "Potvrdit příchozí platbu?"
+              : "Označit jako zaplacené?"
+            : "Odpustit dluh?"
+        }
       >
         <p className="text-sm leading-6 text-cream-muted">
           Potvrdit změnu dluhu{" "}
@@ -126,7 +141,7 @@ export function DebtResolutionActions({
             {isSubmitting
               ? "Ukládám…"
               : isPaid
-                ? "Ano, zaplaceno"
+                ? "Ano, potvrdit"
                 : "Ano, odpustit"}
           </PixelButton>
         </div>

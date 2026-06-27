@@ -1,16 +1,23 @@
-import { ArrowRight, Clock3, ReceiptText } from "lucide-react";
+import {
+  ArrowRight,
+  Clock3,
+  ReceiptText,
+} from "lucide-react";
 
 import { PixelBadge } from "@/components/ui/pixel-badge";
 import { DebtResolutionActions } from "@/features/debts/debt-resolution-actions";
 import type { DebtActor } from "@/features/debts/debt-service";
+import { DebtPaymentActions } from "@/features/payments/debt-payment-actions";
 import { formatExpenseDate } from "@/lib/formatters";
 import { formatCzkFromCents } from "@/lib/money";
 import type { Debt, DebtStatus } from "@/types/debt";
+import type { AppSettings } from "@/types/settings";
 
 type DebtRowProps = {
   debt: Debt;
   isAdmin: boolean;
   actor: DebtActor | null;
+  settings: AppSettings | null;
 };
 
 const statusLabels: Record<DebtStatus, string> = {
@@ -34,6 +41,7 @@ export function DebtRow({
   debt,
   isAdmin,
   actor,
+  settings,
 }: DebtRowProps) {
   return (
     <article className="grid gap-4 border-b-2 border-outline p-4 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -87,13 +95,23 @@ export function DebtRow({
           </p>
 
           <p className="mt-1 text-[11px] text-cream-muted">
-            {debt.status === "paid"
-              ? `Potvrdil ${debt.settledByName ?? "admin"}`
-              : debt.status === "forgiven"
-                ? `Odpustil ${debt.settledByName ?? "admin"}`
-                : "Čeká na vyrovnání"}
+            {debt.status === "pending"
+              ? "Platba čeká na potvrzení"
+              : debt.status === "paid"
+                ? `Potvrdil ${debt.settledByName ?? "admin"}`
+                : debt.status === "forgiven"
+                  ? `Odpustil ${debt.settledByName ?? "admin"}`
+                  : "Čeká na vyrovnání"}
           </p>
         </div>
+
+        {actor ? (
+          <DebtPaymentActions
+            actor={actor}
+            debt={debt}
+            settings={settings}
+          />
+        ) : null}
 
         {isAdmin && actor ? (
           <DebtResolutionActions actor={actor} debt={debt} />

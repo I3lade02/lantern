@@ -35,6 +35,13 @@ type CreateSettlementInput = {
 
 type DebtResolution = Extract<DebtStatus, "paid" | "forgiven">;
 
+type DebtPaymentSubmissionInput = {
+  recipientAccount: string;
+  recipientName: string;
+  variableSymbol: string | null;
+  message: string;
+};
+
 function createSettlementMessage(
   actorName: string,
   sessionTitle: string,
@@ -54,7 +61,9 @@ export async function createDebtSettlement({
   actor,
 }: CreateSettlementInput): Promise<string> {
   if (expenses.length === 0) {
-    throw new Error("Pro tuto session nejsou žádné nové útraty k vyrovnání.");
+    throw new Error(
+      "Pro tuto session nejsou žádné nové útraty k vyrovnání.",
+    );
   }
 
   const writeCount = 2 + calculation.transfers.length;
@@ -87,6 +96,7 @@ export async function createDebtSettlement({
 
     batch.set(debtRef, {
       id: debtRef.id,
+
       settlementId: settlementRef.id,
       sessionId: session.id,
       sessionTitle: session.title,
@@ -108,6 +118,8 @@ export async function createDebtSettlement({
       settledAt: null,
       settledById: null,
       settledByName: null,
+
+      paymentId: null,
     });
   }
 
@@ -130,13 +142,88 @@ export async function createDebtSettlement({
   return settlementRef.id;
 }
 
+export async function submitDebtPayment(
+  debt: Debt,
+  payment: DebtPaymentSubmissionInput,
+  actor: DebtActor,
+): Promise<void> {
+  if (debt.status !== "open") {
+    throw new Error(
+      "Tento dluh už není možné označit jako zaplacený.",
+    );
+  }
+
+  if (debt.fromUserId !== actor.id) {
+    throw new Error(
+      "Platbu může jako odeslanou označit pouze člověk, který dluh platí.",
+    );
+  }
+
+  const debtRef = doc(firestoreDb, "debts", debt.id);
+  const paymentRef = doc(collection(firestoreDb, "payments"));
+  const activityRef = doc(collection(firestoreDb, "activityLog"));
+  const batch = writeBatch(firestoreDb);
+
+  batch.update(debtRef, {
+    status: "pending",
+    paymentId: paymentRef.id,
+    updatedAt: serverTimestamp(),
+  });
+
+  batch.set(paymentRef, {
+    id: paymentRef.id,
+
+    debtId: debt.id,
+    sessionId: debt.sessionId,
+    sessionTitle: debt.sessionTitle,
+
+    fromUserId: debt.fromUserId,
+    fromUserName: debt.fromUserName,
+
+    toUserId: debt.toUserId,
+    toUserName: debt.toUserName,
+
+    amountCents: debt.amountCents,
+
+    method: "qr_payment",
+    status: "submitted",
+
+    recipientAccount: payment.recipientAccount,
+    recipientName: payment.recipientName,
+    variableSymbol: payment.variableSymbol,
+    message: payment.message,
+
+    submittedById: actor.id,
+    submittedByName: actor.name,
+    submittedAt: serverTimestamp(),
+
+    reviewedAt: null,
+    reviewedById: null,
+    reviewedByName: null,
+  });
+
+  batch.set(activityRef, {
+    id: activityRef.id,
+    type: "payment_submitted",
+    actorId: actor.id,
+    actorName: actor.name,
+    message: `${actor.name} označil platbu ${debt.fromUserName} → ${debt.toUserName} za ${formatCzkFromCents(debt.amountCents)} jako odeslanou.`,
+    sessionId: debt.sessionId,
+    createdAt: serverTimestamp(),
+  });
+
+  await batch.commit();
+}
+
 export async function resolveDebt(
   debt: Debt,
   resolution: DebtResolution,
   actor: DebtActor,
 ): Promise<void> {
   if (debt.status !== "open" && debt.status !== "pending") {
-    throw new Error("Tento dluh už není možné znovu uzavřít.");
+    throw new Error(
+      "Tento dluh už není možné znovu uzavřít.",
+    );
   }
 
   const debtRef = doc(firestoreDb, "debts", debt.id);
@@ -151,8 +238,25 @@ export async function resolveDebt(
     settledByName: actor.name,
   });
 
+  if (debt.status === "pending" && debt.paymentId) {
+    const paymentRef = doc(
+      firestoreDb,
+      "payments",
+      debt.paymentId,
+    );
+
+    batch.update(paymentRef, {
+      status: resolution === "paid" ? "confirmed" : "cancelled",
+      reviewedAt: serverTimestamp(),
+      reviewedById: actor.id,
+      reviewedByName: actor.name,
+    });
+  }
+
   const resolutionText =
-    resolution === "paid" ? "označil jako zaplacený" : "odpustil";
+    resolution === "paid"
+      ? "potvrdil jako zaplacený"
+      : "odpustil";
 
   batch.set(activityRef, {
     id: activityRef.id,
@@ -172,6 +276,13 @@ export function getDebtErrorMessage(error: unknown): string {
     return "Něco se pokazilo. Zkus to prosím znovu.";
   }
 
+  if (
+    error.message.includes("není možné") ||
+    error.message.includes("může jako odeslanou")
+  ) {
+    return error.message;
+  }
+
   if (error.message.includes("žádné nové útraty")) {
     return error.message;
   }
@@ -180,13 +291,9 @@ export function getDebtErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  if (error.message.includes("už není možné")) {
-    return error.message;
-  }
-
   if (error.message.toLowerCase().includes("permission")) {
     return "Nemáš oprávnění provést tuto změnu.";
   }
 
-  return "Vyrovnání se nepodařilo uložit. Zkus to prosím znovu.";
+  return "Změnu dluhu se nepodařilo uložit. Zkus to prosím znovu.";
 }

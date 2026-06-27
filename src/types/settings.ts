@@ -6,5 +6,6 @@ export type AppSettings = {
     paymentRecipientAccount: string | null;
     paymentRecipientName: string | null;
     defaultPaymentMessage: string | null;
+    defaultPaymantVariableSymbol: string | null;
     updatedAt: Timestamp | null;
 };

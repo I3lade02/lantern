@@ -8,10 +8,17 @@ export const AVATAR_COLORS = [
     "amber",
     "moss",
     "wine",
-    "cream",
+    "cream"
 ] as const;
 
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
+
+export const AVATAR_COLOR_LABELS: Record<AvatarColor, string> = {
+    amber: "Jantar",
+    moss: "Mech",
+    wine: "Víno",
+    cream: "Pergamen",
+};
 
 export type UserProfile = {
     id: string;

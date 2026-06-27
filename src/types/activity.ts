@@ -8,6 +8,7 @@ export const ACTIVITY_TYPES = [
   "expense_updated",
   "debt_paid",
   "debts_calculated",
+  "payment_submitted",
   "debt_resolved",
   "dice_rolled",
   "game_added",

@@ -74,23 +74,36 @@ service cloud.firestore {
     }
 
     function isValidOwnProfileUpdate(userId) {
-      return hasApprovedEmail()
-        && request.auth.uid == userId
-        && hasValidProfileShape(request.resource.data)
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.updatedAt == request.time;
-    }
+  return hasApprovedEmail()
+    && request.auth.uid == userId
+    && hasValidProfileShape(request.resource.data)
+    && request.resource.data.id == resource.data.id
+    && request.resource.data.email == resource.data.email
+    && request.resource.data.role == resource.data.role
+    && request.resource.data.createdAt == resource.data.createdAt
+    && request.resource.data.updatedAt == request.time
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+      "displayName",
+      "avatarColor",
+      "updatedAt"
+    ]);
+}
 
-    function isValidAdminProfileUpdate() {
-      return hasValidProfileShape(request.resource.data)
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.updatedAt == request.time;
-    }
+function isValidAdminRoleUpdate(userId) {
+  return isAdmin()
+    && request.auth.uid != userId
+    && hasValidProfileShape(request.resource.data)
+    && request.resource.data.id == resource.data.id
+    && request.resource.data.email == resource.data.email
+    && request.resource.data.displayName == resource.data.displayName
+    && request.resource.data.avatarColor == resource.data.avatarColor
+    && request.resource.data.createdAt == resource.data.createdAt
+    && request.resource.data.updatedAt == request.time
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+      "role",
+      "updatedAt"
+    ]);
+}
 
     function hasValidRsvpSummary(summary) {
       return summary is map
@@ -297,6 +310,7 @@ service cloud.firestore {
           "expense_updated",
           "debt_paid",
           "debts_calculated",
+          "payment_submitted",
           "debt_resolved",
           "dice_rolled",
           "game_added",
@@ -315,305 +329,715 @@ service cloud.firestore {
     }
 
     function hasValidExpenseShareShape(share) {
-  return share is map
-    && share.keys().hasAll([
-      "userId",
-      "userName",
-      "amountCents"
-    ])
-    && share.keys().hasOnly([
-      "userId",
-      "userName",
-      "amountCents"
-    ])
-    && share.userId is string
-    && share.userId.size() > 0
-    && share.userName is string
-    && share.userName.size() >= 2
-    && share.userName.size() <= 24
-    && share.amountCents is int
-    && share.amountCents > 0;
-}
+      return share is map
+        && share.keys().hasAll([
+          "userId",
+          "userName",
+          "amountCents"
+        ])
+        && share.keys().hasOnly([
+          "userId",
+          "userName",
+          "amountCents"
+        ])
+        && share.userId is string
+        && share.userId.size() > 0
+        && share.userName is string
+        && share.userName.size() >= 2
+        && share.userName.size() <= 24
+        && share.amountCents is int
+        && share.amountCents > 0;
+    }
 
-  function hasValidExpenseShape(data) {
-    return data.keys().hasAll([
-        "id",
-        "sessionId",
-        "title",
-        "category",
-        "amountCents",
-        "payerId",
-        "payerName",
-        "participantIds",
-        "splitType",
-        "shares",
-        "note",
-        "createdBy",
-        "createdAt",
-        "updatedAt"
-      ])
-      && data.keys().hasOnly([
-        "id",
-        "sessionId",
-        "title",
-        "category",
-        "amountCents",
-        "payerId",
-        "payerName",
-        "participantIds",
-        "splitType",
-        "shares",
-        "note",
-        "createdBy",
-        "createdAt",
-        "updatedAt"
-      ])
-      && data.id is string
-      && data.sessionId is string
-      && data.title is string
-      && data.title.size() >= 2
-      && data.title.size() <= 80
-      && data.category in [
-        "beer",
-        "lemonade",
-        "food",
-        "snack",
-        "cake",
-        "other"
-      ]
-      && data.amountCents is int
-      && data.amountCents > 0
-      && data.amountCents <= 10000000
-      && data.payerId is string
-      && data.payerId.size() > 0
-      && data.payerName is string
-      && data.payerName.size() >= 2
-      && data.payerName.size() <= 24
-      && data.participantIds is list
-      && data.participantIds.size() >= 1
-      && data.participantIds.size() <= 20
-      && data.splitType in [
-        "single",
-        "selected",
-        "sessionParticipants",
-        "custom"
-      ]
-      && data.shares is list
-      && data.shares.size() >= 1
-      && data.shares.size() <= 20
-      && data.note is string
-      && data.note.size() <= 500
-      && data.createdBy is string
-      && data.createdAt is timestamp
-      && data.updatedAt is timestamp;
-  }
+    function hasValidExpenseShape(data) {
+      return data.keys().hasAll([
+          "id",
+          "sessionId",
+          "title",
+          "category",
+          "amountCents",
+          "payerId",
+          "payerName",
+          "participantIds",
+          "splitType",
+          "shares",
+          "note",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.keys().hasOnly([
+          "id",
+          "sessionId",
+          "title",
+          "category",
+          "amountCents",
+          "payerId",
+          "payerName",
+          "participantIds",
+          "splitType",
+          "shares",
+          "note",
+          "createdBy",
+          "createdAt",
+          "updatedAt"
+        ])
+        && data.id is string
+        && data.sessionId is string
+        && data.title is string
+        && data.title.size() >= 2
+        && data.title.size() <= 80
+        && data.category in [
+          "beer",
+          "lemonade",
+          "food",
+          "snack",
+          "cake",
+          "pizza",
+          "other"
+        ]
+        && data.amountCents is int
+        && data.amountCents > 0
+        && data.amountCents <= 10000000
+        && data.payerId is string
+        && data.payerId.size() > 0
+        && data.payerName is string
+        && data.payerName.size() >= 2
+        && data.payerName.size() <= 24
+        && data.participantIds is list
+        && data.participantIds.size() >= 1
+        && data.participantIds.size() <= 20
+        && data.splitType in [
+          "single",
+          "selected",
+          "sessionParticipants",
+          "custom"
+        ]
+        && data.shares is list
+        && data.shares.size() >= 1
+        && data.shares.size() <= 20
+        && data.note is string
+        && data.note.size() <= 500
+        && data.createdBy is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
 
-  function isValidExpenseCreate(expenseId) {
-    return hasApprovedEmail()
-      && hasValidExpenseShape(request.resource.data)
-      && request.resource.data.id == expenseId
-      && request.resource.data.createdBy == request.auth.uid
-      && exists(
-        /databases/$(database)/documents/sessions/$(request.resource.data.sessionId)
-      )
-      && request.resource.data.createdAt == request.time
-      && request.resource.data.updatedAt == request.time;
-  }
+    function isValidExpenseCreate(expenseId) {
+      return hasApprovedEmail()
+        && hasValidExpenseShape(request.resource.data)
+        && request.resource.data.id == expenseId
+        && request.resource.data.createdBy == request.auth.uid
+        && exists(
+          /databases/$(database)/documents/sessions/$(request.resource.data.sessionId)
+        )
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
 
-  function isValidExpenseUpdate(expenseId) {
-    return isAdmin()
-      && hasValidExpenseShape(request.resource.data)
-      && request.resource.data.id == expenseId
-      && request.resource.data.id == resource.data.id
-      && request.resource.data.createdBy == resource.data.createdBy
-      && request.resource.data.createdAt == resource.data.createdAt
-      && exists(
-        /databases/$(database)/documents/sessions/$(request.resource.data.sessionId)
-      )
-      && request.resource.data.updatedAt == request.time;
-  }
+    function isValidExpenseUpdate(expenseId) {
+      return isAdmin()
+        && hasValidExpenseShape(request.resource.data)
+        && request.resource.data.id == expenseId
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && exists(
+          /databases/$(database)/documents/sessions/$(request.resource.data.sessionId)
+        )
+        && request.resource.data.updatedAt == request.time;
+    }
 
-function hasValidSettlementShape(data) {
+    function hasValidSettlementShape(data) {
+      return data.keys().hasAll([
+          "id",
+          "sessionId",
+          "sessionTitle",
+          "sourceExpenseIds",
+          "sourceExpenseCount",
+          "totalExpenseCents",
+          "debtCount",
+          "createdBy",
+          "createdByName",
+          "createdAt"
+        ])
+        && data.keys().hasOnly([
+          "id",
+          "sessionId",
+          "sessionTitle",
+          "sourceExpenseIds",
+          "sourceExpenseCount",
+          "totalExpenseCents",
+          "debtCount",
+          "createdBy",
+          "createdByName",
+          "createdAt"
+        ])
+        && data.id is string
+        && data.sessionId is string
+        && data.sessionId.size() > 0
+        && data.sessionTitle is string
+        && data.sessionTitle.size() >= 3
+        && data.sessionTitle.size() <= 80
+        && data.sourceExpenseIds is list
+        && data.sourceExpenseIds.size() >= 1
+        && data.sourceExpenseIds.size() <= 200
+        && data.sourceExpenseCount is int
+        && data.sourceExpenseCount == data.sourceExpenseIds.size()
+        && data.totalExpenseCents is int
+        && data.totalExpenseCents >= 0
+        && data.totalExpenseCents <= 100000000
+        && data.debtCount is int
+        && data.debtCount >= 0
+        && data.debtCount <= 100
+        && data.createdBy == request.auth.uid
+        && data.createdByName is string
+        && data.createdByName.size() >= 2
+        && data.createdByName.size() <= 24
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSettlementCreate(settlementId) {
+      return isAdmin()
+        && hasValidSettlementShape(request.resource.data)
+        && request.resource.data.id == settlementId
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function hasOptionalPaymentId(data) {
+      return !data.keys().hasAny(["paymentId"])
+        || data.paymentId == null
+        || data.paymentId is string;
+    }
+
+    function paymentIdOrNull(data) {
+      return data.keys().hasAny(["paymentId"])
+        ? data.paymentId
+        : null;
+    }
+
+    function hasValidDebtShape(data) {
+      return data.keys().hasAll([
+          "id",
+          "settlementId",
+          "sessionId",
+          "sessionTitle",
+          "fromUserId",
+          "fromUserName",
+          "toUserId",
+          "toUserName",
+          "amountCents",
+          "status",
+          "note",
+          "createdBy",
+          "createdAt",
+          "updatedAt",
+          "settledAt",
+          "settledById",
+          "settledByName"
+        ])
+        && data.keys().hasOnly([
+          "id",
+          "settlementId",
+          "sessionId",
+          "sessionTitle",
+          "fromUserId",
+          "fromUserName",
+          "toUserId",
+          "toUserName",
+          "amountCents",
+          "status",
+          "note",
+          "createdBy",
+          "createdAt",
+          "updatedAt",
+          "settledAt",
+          "settledById",
+          "settledByName",
+          "paymentId"
+        ])
+        && data.id is string
+        && data.settlementId is string
+        && data.settlementId.size() > 0
+        && data.sessionId is string
+        && data.sessionId.size() > 0
+        && data.sessionTitle is string
+        && data.sessionTitle.size() >= 3
+        && data.sessionTitle.size() <= 80
+        && data.fromUserId is string
+        && data.fromUserId.size() > 0
+        && data.fromUserName is string
+        && data.fromUserName.size() >= 2
+        && data.fromUserName.size() <= 24
+        && data.toUserId is string
+        && data.toUserId.size() > 0
+        && data.toUserName is string
+        && data.toUserName.size() >= 2
+        && data.toUserName.size() <= 24
+        && data.fromUserId != data.toUserId
+        && data.amountCents is int
+        && data.amountCents > 0
+        && data.amountCents <= 10000000
+        && data.status in ["open", "pending", "paid", "forgiven"]
+        && data.note is string
+        && data.note.size() <= 500
+        && data.createdBy is string
+        && data.createdBy.size() > 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && (data.settledAt == null || data.settledAt is timestamp)
+        && (data.settledById == null || data.settledById is string)
+        && (data.settledByName == null || data.settledByName is string)
+        && hasOptionalPaymentId(data);
+    }
+
+    function isValidDebtCreate(debtId) {
+      return isAdmin()
+        && hasValidDebtShape(request.resource.data)
+        && request.resource.data.id == debtId
+        && request.resource.data.status == "open"
+        && request.resource.data.settledAt == null
+        && request.resource.data.settledById == null
+        && request.resource.data.settledByName == null
+        && paymentIdOrNull(request.resource.data) == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function isValidDebtPaymentSubmission() {
+      return hasApprovedEmail()
+        && request.auth.uid == resource.data.fromUserId
+        && hasValidDebtShape(request.resource.data)
+        && resource.data.status == "open"
+        && request.resource.data.status == "pending"
+        && paymentIdOrNull(resource.data) == null
+        && paymentIdOrNull(request.resource.data) is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "paymentId",
+          "updatedAt"
+        ])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.settledAt == null
+        && request.resource.data.settledById == null
+        && request.resource.data.settledByName == null;
+    }
+
+    function hasLinkedPaymentResolution() {
+      let paymentId = paymentIdOrNull(resource.data);
+
+      return resource.data.status != "pending"
+        || paymentId == null
+        || (
+          exists(
+            /databases/$(database)/documents/payments/$(paymentId)
+          )
+          && (
+            (
+              request.resource.data.status == "paid"
+              && getAfter(
+                /databases/$(database)/documents/payments/$(paymentId)
+              ).data.status == "confirmed"
+            )
+            || (
+              request.resource.data.status == "forgiven"
+              && getAfter(
+                /databases/$(database)/documents/payments/$(paymentId)
+              ).data.status == "cancelled"
+            )
+          )
+        );
+    }
+
+    function isValidDebtResolution() {
+      return isAdmin()
+        && hasValidDebtShape(request.resource.data)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.settlementId == resource.data.settlementId
+        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.sessionTitle == resource.data.sessionTitle
+        && request.resource.data.fromUserId == resource.data.fromUserId
+        && request.resource.data.fromUserName == resource.data.fromUserName
+        && request.resource.data.toUserId == resource.data.toUserId
+        && request.resource.data.toUserName == resource.data.toUserName
+        && request.resource.data.amountCents == resource.data.amountCents
+        && request.resource.data.note == resource.data.note
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt
+        && paymentIdOrNull(request.resource.data)
+          == paymentIdOrNull(resource.data)
+        && resource.data.status in ["open", "pending"]
+        && request.resource.data.status in ["paid", "forgiven"]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "updatedAt",
+          "settledAt",
+          "settledById",
+          "settledByName"
+        ])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.settledAt == request.time
+        && request.resource.data.settledById == request.auth.uid
+        && request.resource.data.settledByName is string
+        && request.resource.data.settledByName.size() >= 2
+        && request.resource.data.settledByName.size() <= 24
+        && hasLinkedPaymentResolution();
+    }
+
+    function hasValidPaymentShape(data) {
+      return data.keys().hasAll([
+          "id",
+          "debtId",
+          "sessionId",
+          "sessionTitle",
+          "fromUserId",
+          "fromUserName",
+          "toUserId",
+          "toUserName",
+          "amountCents",
+          "method",
+          "status",
+          "recipientAccount",
+          "recipientName",
+          "variableSymbol",
+          "message",
+          "submittedById",
+          "submittedByName",
+          "submittedAt",
+          "reviewedAt",
+          "reviewedById",
+          "reviewedByName"
+        ])
+        && data.keys().hasOnly([
+          "id",
+          "debtId",
+          "sessionId",
+          "sessionTitle",
+          "fromUserId",
+          "fromUserName",
+          "toUserId",
+          "toUserName",
+          "amountCents",
+          "method",
+          "status",
+          "recipientAccount",
+          "recipientName",
+          "variableSymbol",
+          "message",
+          "submittedById",
+          "submittedByName",
+          "submittedAt",
+          "reviewedAt",
+          "reviewedById",
+          "reviewedByName"
+        ])
+        && data.id is string
+        && data.debtId is string
+        && data.debtId.size() > 0
+        && data.sessionId is string
+        && data.sessionId.size() > 0
+        && data.sessionTitle is string
+        && data.sessionTitle.size() >= 3
+        && data.sessionTitle.size() <= 80
+        && data.fromUserId is string
+        && data.fromUserName is string
+        && data.toUserId is string
+        && data.toUserName is string
+        && data.amountCents is int
+        && data.amountCents > 0
+        && data.method == "qr_payment"
+        && data.status in ["submitted", "confirmed", "cancelled"]
+        && data.recipientAccount is string
+        && data.recipientAccount.matches("^CZ[0-9]{22}$")
+        && data.recipientName is string
+        && data.recipientName.size() >= 2
+        && data.recipientName.size() <= 120
+        && (
+          data.variableSymbol == null
+          || (
+            data.variableSymbol is string
+            && data.variableSymbol.matches("^[0-9]{1,10}$")
+          )
+        )
+        && data.message is string
+        && data.message.size() >= 1
+        && data.message.size() <= 60
+        && data.submittedById is string
+        && data.submittedByName is string
+        && data.submittedAt is timestamp
+        && (data.reviewedAt == null || data.reviewedAt is timestamp)
+        && (data.reviewedById == null || data.reviewedById is string)
+        && (data.reviewedByName == null || data.reviewedByName is string);
+    }
+
+    function isValidPaymentSubmission(paymentId) {
+      let debtPath =
+        /databases/$(database)/documents/debts/$(request.resource.data.debtId);
+
+      let afterDebt = getAfter(debtPath).data;
+
+      return hasApprovedEmail()
+        && hasValidPaymentShape(request.resource.data)
+        && request.resource.data.id == paymentId
+        && request.resource.data.status == "submitted"
+        && request.resource.data.submittedById == request.auth.uid
+        && request.resource.data.submittedById
+          == request.resource.data.fromUserId
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.reviewedById == null
+        && request.resource.data.reviewedByName == null
+        && exists(debtPath)
+        && afterDebt.status == "pending"
+        && paymentIdOrNull(afterDebt) == paymentId
+        && afterDebt.id == request.resource.data.debtId
+        && afterDebt.sessionId == request.resource.data.sessionId
+        && afterDebt.sessionTitle == request.resource.data.sessionTitle
+        && afterDebt.fromUserId == request.resource.data.fromUserId
+        && afterDebt.fromUserName == request.resource.data.fromUserName
+        && afterDebt.toUserId == request.resource.data.toUserId
+        && afterDebt.toUserName == request.resource.data.toUserName
+        && afterDebt.amountCents == request.resource.data.amountCents;
+    }
+
+    function isValidPaymentReview() {
+      let debtPath =
+        /databases/$(database)/documents/debts/$(resource.data.debtId);
+
+      let afterDebt = getAfter(debtPath).data;
+
+      return isAdmin()
+        && hasValidPaymentShape(request.resource.data)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.debtId == resource.data.debtId
+        && request.resource.data.sessionId == resource.data.sessionId
+        && request.resource.data.sessionTitle == resource.data.sessionTitle
+        && request.resource.data.fromUserId == resource.data.fromUserId
+        && request.resource.data.fromUserName == resource.data.fromUserName
+        && request.resource.data.toUserId == resource.data.toUserId
+        && request.resource.data.toUserName == resource.data.toUserName
+        && request.resource.data.amountCents == resource.data.amountCents
+        && request.resource.data.method == resource.data.method
+        && request.resource.data.recipientAccount
+          == resource.data.recipientAccount
+        && request.resource.data.recipientName
+          == resource.data.recipientName
+        && request.resource.data.variableSymbol
+          == resource.data.variableSymbol
+        && request.resource.data.message == resource.data.message
+        && request.resource.data.submittedById
+          == resource.data.submittedById
+        && request.resource.data.submittedByName
+          == resource.data.submittedByName
+        && request.resource.data.submittedAt
+          == resource.data.submittedAt
+        && resource.data.status == "submitted"
+        && request.resource.data.status in ["confirmed", "cancelled"]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "reviewedAt",
+          "reviewedById",
+          "reviewedByName"
+        ])
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.reviewedById == request.auth.uid
+        && request.resource.data.reviewedByName is string
+        && request.resource.data.reviewedByName.size() >= 2
+        && request.resource.data.reviewedByName.size() <= 24
+        && exists(debtPath)
+        && (
+          (
+            request.resource.data.status == "confirmed"
+            && afterDebt.status == "paid"
+          )
+          || (
+            request.resource.data.status == "cancelled"
+            && afterDebt.status == "forgiven"
+          )
+        );
+    }
+
+    function hasValidAppSettingsShape(data) {
+      return data.keys().hasAll([
+          "id",
+          "partyNotice",
+          "paymentRecipientAccount",
+          "paymentRecipientName",
+          "defaultPaymentMessage",
+          "defaultPaymentVariableSymbol",
+          "updatedAt"
+        ])
+        && data.keys().hasOnly([
+          "id",
+          "partyNotice",
+          "paymentRecipientAccount",
+          "paymentRecipientName",
+          "defaultPaymentMessage",
+          "defaultPaymentVariableSymbol",
+          "updatedAt"
+        ])
+        && data.id == "main"
+        && (
+          data.partyNotice == null
+          || (
+            data.partyNotice is string
+            && data.partyNotice.size() <= 300
+          )
+        )
+        && (
+          data.paymentRecipientAccount == null
+          || (
+            data.paymentRecipientAccount is string
+            && data.paymentRecipientAccount.matches("^CZ[0-9]{22}$")
+          )
+        )
+        && (
+          data.paymentRecipientName == null
+          || (
+            data.paymentRecipientName is string
+            && data.paymentRecipientName.size() >= 2
+            && data.paymentRecipientName.size() <= 120
+          )
+        )
+        && (
+          data.defaultPaymentMessage == null
+          || (
+            data.defaultPaymentMessage is string
+            && data.defaultPaymentMessage.size() <= 60
+          )
+        )
+        && (
+          data.defaultPaymentVariableSymbol == null
+          || (
+            data.defaultPaymentVariableSymbol is string
+            && data.defaultPaymentVariableSymbol.matches("^[0-9]{1,10}$")
+          )
+        )
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAppSettingsWrite(settingsId) {
+      return isAdmin()
+        && settingsId == "main"
+        && hasValidAppSettingsShape(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function hasValidDiceRollShape(data) {
   return data.keys().hasAll([
       "id",
+      "rollerId",
+      "rollerName",
       "sessionId",
       "sessionTitle",
-      "sourceExpenseIds",
-      "sourceExpenseCount",
-      "totalExpenseCents",
-      "debtCount",
-      "createdBy",
-      "createdByName",
+      "dieSides",
+      "quantity",
+      "modifier",
+      "rollMode",
+      "individualRolls",
+      "keptRoll",
+      "total",
+      "isCriticalHit",
+      "isCriticalFail",
       "createdAt"
     ])
     && data.keys().hasOnly([
       "id",
+      "rollerId",
+      "rollerName",
       "sessionId",
       "sessionTitle",
-      "sourceExpenseIds",
-      "sourceExpenseCount",
-      "totalExpenseCents",
-      "debtCount",
-      "createdBy",
-      "createdByName",
+      "dieSides",
+      "quantity",
+      "modifier",
+      "rollMode",
+      "individualRolls",
+      "keptRoll",
+      "total",
+      "isCriticalHit",
+      "isCriticalFail",
       "createdAt"
     ])
     && data.id is string
-    && data.sessionId is string
-    && data.sessionId.size() > 0
-    && data.sessionTitle is string
-    && data.sessionTitle.size() >= 3
-    && data.sessionTitle.size() <= 80
-    && data.sourceExpenseIds is list
-    && data.sourceExpenseIds.size() >= 1
-    && data.sourceExpenseIds.size() <= 200
-    && data.sourceExpenseCount is int
-    && data.sourceExpenseCount == data.sourceExpenseIds.size()
-    && data.totalExpenseCents is int
-    && data.totalExpenseCents >= 0
-    && data.totalExpenseCents <= 100000000
-    && data.debtCount is int
-    && data.debtCount >= 0
-    && data.debtCount <= 100
-    && data.createdBy == request.auth.uid
-    && data.createdByName is string
-    && data.createdByName.size() >= 2
-    && data.createdByName.size() <= 24
-    && data.createdAt is timestamp;
+    && data.rollerId == request.auth.uid
+    && data.rollerName is string
+    && data.rollerName.size() >= 2
+    && data.rollerName.size() <= 24
+    && (
+      data.sessionId == null
+      || (
+        data.sessionId is string
+        && data.sessionId.size() > 0
+      )
+    )
+    && (
+      data.sessionTitle == null
+      || (
+        data.sessionTitle is string
+        && data.sessionTitle.size() >= 3
+        && data.sessionTitle.size() <= 80
+      )
+    )
+    && data.dieSides in [4, 6, 8, 10, 12, 20, 100]
+    && data.quantity is int
+    && data.quantity >= 1
+    && data.quantity <= 20
+    && data.modifier is int
+    && data.modifier >= -100
+    && data.modifier <= 100
+    && data.rollMode in [
+      "standard",
+      "advantage",
+      "disadvantage"
+    ]
+    && data.individualRolls is list
+    && data.individualRolls.size() >= 1
+    && data.individualRolls.size() <= 20
+    && (
+      data.keptRoll == null
+      || data.keptRoll is int
+    )
+    && data.total is int
+    && data.isCriticalHit is bool
+    && data.isCriticalFail is bool
+    && data.createdAt is timestamp
+    && (
+      (
+        data.rollMode == "standard"
+        && data.individualRolls.size() == data.quantity
+        && data.keptRoll == null
+      )
+      || (
+        data.rollMode in ["advantage", "disadvantage"]
+        && data.dieSides == 20
+        && data.quantity == 1
+        && data.individualRolls.size() == 2
+        && data.keptRoll is int
+      )
+    );
 }
 
-function isValidSettlementCreate(settlementId) {
-  return isAdmin()
-    && hasValidSettlementShape(request.resource.data)
-    && request.resource.data.id == settlementId
+function isValidDiceRollCreate(rollId) {
+  return hasApprovedEmail()
+    && hasValidDiceRollShape(request.resource.data)
+    && request.resource.data.id == rollId
     && request.resource.data.createdAt == request.time;
 }
 
-function hasValidDebtShape(data) {
-  return data.keys().hasAll([
-      "id",
-      "settlementId",
-      "sessionId",
-      "sessionTitle",
-      "fromUserId",
-      "fromUserName",
-      "toUserId",
-      "toUserName",
-      "amountCents",
-      "status",
-      "note",
-      "createdBy",
-      "createdAt",
-      "updatedAt",
-      "settledAt",
-      "settledById",
-      "settledByName"
-    ])
-    && data.keys().hasOnly([
-      "id",
-      "settlementId",
-      "sessionId",
-      "sessionTitle",
-      "fromUserId",
-      "fromUserName",
-      "toUserId",
-      "toUserName",
-      "amountCents",
-      "status",
-      "note",
-      "createdBy",
-      "createdAt",
-      "updatedAt",
-      "settledAt",
-      "settledById",
-      "settledByName"
-    ])
-    && data.id is string
-    && data.settlementId is string
-    && data.settlementId.size() > 0
-    && data.sessionId is string
-    && data.sessionId.size() > 0
-    && data.sessionTitle is string
-    && data.sessionTitle.size() >= 3
-    && data.sessionTitle.size() <= 80
-    && data.fromUserId is string
-    && data.fromUserId.size() > 0
-    && data.fromUserName is string
-    && data.fromUserName.size() >= 2
-    && data.fromUserName.size() <= 24
-    && data.toUserId is string
-    && data.toUserId.size() > 0
-    && data.toUserName is string
-    && data.toUserName.size() >= 2
-    && data.toUserName.size() <= 24
-    && data.fromUserId != data.toUserId
-    && data.amountCents is int
-    && data.amountCents > 0
-    && data.amountCents <= 10000000
-    && data.status in ["open", "pending", "paid", "forgiven"]
-    && data.note is string
-    && data.note.size() <= 500
-    && data.createdBy is string
-    && data.createdBy.size() > 0
-    && data.createdAt is timestamp
-    && data.updatedAt is timestamp
-    && (data.settledAt == null || data.settledAt is timestamp)
-    && (data.settledById == null || data.settledById is string)
-    && (data.settledByName == null || data.settledByName is string);
-}
-
-function isValidDebtCreate(debtId) {
-  return isAdmin()
-    && hasValidDebtShape(request.resource.data)
-    && request.resource.data.id == debtId
-    && request.resource.data.status == "open"
-    && request.resource.data.settledAt == null
-    && request.resource.data.settledById == null
-    && request.resource.data.settledByName == null
-    && request.resource.data.createdAt == request.time
-    && request.resource.data.updatedAt == request.time;
-}
-
-function isValidDebtResolution() {
-  return isAdmin()
-    && hasValidDebtShape(request.resource.data)
-    && request.resource.data.id == resource.data.id
-    && request.resource.data.settlementId == resource.data.settlementId
-    && request.resource.data.sessionId == resource.data.sessionId
-    && request.resource.data.sessionTitle == resource.data.sessionTitle
-    && request.resource.data.fromUserId == resource.data.fromUserId
-    && request.resource.data.fromUserName == resource.data.fromUserName
-    && request.resource.data.toUserId == resource.data.toUserId
-    && request.resource.data.toUserName == resource.data.toUserName
-    && request.resource.data.amountCents == resource.data.amountCents
-    && request.resource.data.note == resource.data.note
-    && request.resource.data.createdBy == resource.data.createdBy
-    && request.resource.data.createdAt == resource.data.createdAt
-    && resource.data.status in ["open", "pending"]
-    && request.resource.data.status in ["paid", "forgiven"]
-    && request.resource.data.updatedAt == request.time
-    && request.resource.data.settledAt == request.time
-    && request.resource.data.settledById == request.auth.uid
-    && request.resource.data.settledByName is string
-    && request.resource.data.settledByName.size() >= 2
-    && request.resource.data.settledByName.size() <= 24;
-}
-
     match /users/{userId} {
-      allow get, list: if hasApprovedEmail();
+  allow get, list: if hasApprovedEmail();
 
-      allow create: if isSignedIn()
-        && request.auth.uid == userId
-        && isValidInitialProfile(userId);
+  allow create: if isSignedIn()
+    && request.auth.uid == userId
+    && isValidInitialProfile(userId);
 
-      allow update: if (
-        isAdmin() && isValidAdminProfileUpdate()
-      ) || (
-        request.auth.uid == userId && isValidOwnProfileUpdate(userId)
-      );
+  allow update: if (
+    request.auth.uid == userId
+    && isValidOwnProfileUpdate(userId)
+  ) || isValidAdminRoleUpdate(userId);
 
-      allow delete: if isAdmin();
-    }
+  allow delete: if isAdmin();
+}
 
     match /sessions/{sessionId} {
       allow get, list: if hasApprovedEmail();
@@ -639,17 +1063,6 @@ function isValidDebtResolution() {
       }
     }
 
-    match /activityLog/{activityId} {
-      allow get, list: if hasApprovedEmail();
-
-      allow create: if hasApprovedEmail()
-        && hasValidActivityShape(request.resource.data)
-        && request.resource.data.id == activityId
-        && request.resource.data.createdAt == request.time;
-
-      allow update, delete: if false;
-    }
-
     match /expenses/{expenseId} {
       allow get, list: if hasApprovedEmail();
 
@@ -661,25 +1074,59 @@ function isValidDebtResolution() {
     }
 
     match /settlements/{settlementId} {
+      allow get, list: if hasApprovedEmail();
+
+      allow create: if isValidSettlementCreate(settlementId);
+
+      allow update, delete: if false;
+    }
+
+    match /debts/{debtId} {
+      allow get, list: if hasApprovedEmail();
+
+      allow create: if isValidDebtCreate(debtId);
+
+      allow update: if isValidDebtPaymentSubmission()
+        || isValidDebtResolution();
+
+      allow delete: if false;
+    }
+
+    match /diceRolls/{rollId} {
   allow get, list: if hasApprovedEmail();
 
-  allow create: if isValidSettlementCreate(settlementId);
+  allow create: if isValidDiceRollCreate(rollId);
 
   allow update, delete: if false;
 }
 
-match /debts/{debtId} {
-  allow get, list: if hasApprovedEmail();
+    match /payments/{paymentId} {
+      allow get, list: if hasApprovedEmail();
 
-  allow create: if isValidDebtCreate(debtId);
+      allow create: if isValidPaymentSubmission(paymentId);
 
-  allow update: if isValidDebtResolution();
+      allow update: if isValidPaymentReview();
 
-  allow delete: if false;
-}
+      allow delete: if false;
+    }
+
+    match /activityLog/{activityId} {
+      allow get, list: if hasApprovedEmail();
+
+      allow create: if hasApprovedEmail()
+        && hasValidActivityShape(request.resource.data)
+        && request.resource.data.id == activityId
+        && request.resource.data.createdAt == request.time;
+
+      allow update, delete: if false;
+    }
 
     match /appSettings/{settingsId} {
       allow get: if hasApprovedEmail();
+
+      allow create, update: if isValidAppSettingsWrite(settingsId);
+
+      allow delete: if false;
     }
 
     match /{document=**} {

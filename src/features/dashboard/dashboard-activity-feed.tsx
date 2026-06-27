@@ -26,6 +26,7 @@ const activityIcons: Record<ActivityType, typeof Sparkles> = {
   debt_paid: Sparkles,
   debts_calculated: HandCoins,
   debt_resolved: HandCoins,
+  payment_submitted: HandCoins,
   dice_rolled: Dices,
   game_added: Gamepad2,
   member_joined: UserPlus,
