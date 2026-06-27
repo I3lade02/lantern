@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   CalendarClock,
   Dices,
-  Gamepad2,
   MapPin,
   Pencil,
   ReceiptText,
@@ -23,6 +22,8 @@ import { SessionForm } from "@/features/sessions/session-form";
 import { SessionRsvpActions } from "@/features/sessions/session-rsvp-actions";
 import { useSessionDetail } from "@/features/sessions/use-session-detail";
 import { formatSessionDate } from "@/lib/formatters";
+import { SessionExpensesPanel } from "../expenses/session-expense-panel";
+import { SessionDebtSummary } from "../debts/session-debt-summary";
 import type {
   SessionRsvpStatus,
   SessionStatus,
@@ -321,20 +322,12 @@ export function SessionDetailView({
       </section>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <PixelPanel tone="deep">
-          <div className="grid size-11 place-items-center border-2 border-outline bg-panel-muted text-amber shadow-pixel-sm">
-            <Gamepad2 aria-hidden="true" size={20} />
-          </div>
+        <SessionExpensesPanel
+          sessionId={session.id}
+          sessionTitle={session.title}
+        />
 
-          <h2 className="mt-5 font-pixel text-[11px] leading-7 text-cream">
-            Plánované hry
-          </h2>
-
-          <p className="mt-3 text-sm leading-6 text-cream-muted">
-            Herní knihovnu a hlasování přidáme ve verzi 2. Session už má
-            připravené pole `plannedGameIds`.
-          </p>
-        </PixelPanel>
+        <SessionDebtSummary sessionId={session.id} />
 
         <PixelPanel tone="deep">
           <div className="grid size-11 place-items-center border-2 border-outline bg-panel-muted text-moss-light shadow-pixel-sm">

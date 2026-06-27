@@ -4,7 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, HandCoins } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PixelBadge } from "@/components/ui/pixel-badge";
 import { PixelPanel } from "@/components/ui/pixel-panel";
-import { formatCzk } from "@/lib/formatters";
+import { formatCzkFromCents } from "@/lib/money";
 import type { Debt } from "@/types/debt";
 
 type DashboardDebtSummaryProps = {
@@ -29,12 +29,12 @@ export function DashboardDebtSummary({
   );
 
   const totalToPay = debtsToPay.reduce(
-    (total, debt) => total + debt.amount,
+    (total, debt) => total + debt.amountCents,
     0,
   );
 
   const totalToReceive = debtsToReceive.reduce(
-    (total, debt) => total + debt.amount,
+    (total, debt) => total + debt.amountCents,
     0,
   );
 
@@ -63,7 +63,7 @@ export function DashboardDebtSummary({
               Přidat útratu
             </Link>
           }
-          description="Zatím žádné otevřené dluhy. Až přidáme útraty a jejich rozdělení, vyrovnání se objeví právě tady."
+          description="Zatím žádné otevřené dluhy. Až vytvoříš settlement z útrat session, vyrovnání se objeví právě tady."
           icon={HandCoins}
           title="Pokladna je vyrovnaná"
         />
@@ -82,7 +82,7 @@ export function DashboardDebtSummary({
                   </p>
 
                   <p className="mt-1 font-pixel text-sm leading-7 text-cream">
-                    {formatCzk(totalToPay)}
+                    {formatCzkFromCents(totalToPay)}
                   </p>
                 </div>
               </div>
@@ -100,7 +100,7 @@ export function DashboardDebtSummary({
                   </p>
 
                   <p className="mt-1 font-pixel text-sm leading-7 text-cream">
-                    {formatCzk(totalToReceive)}
+                    {formatCzkFromCents(totalToReceive)}
                   </p>
                 </div>
               </div>
@@ -119,13 +119,13 @@ export function DashboardDebtSummary({
                   </p>
 
                   <p className="mt-1 text-xs text-cream-muted">
-                    {debt.note || "Vyrovnání party útrat"}
+                    {debt.note || debt.sessionTitle}
                   </p>
                 </div>
 
                 <div className="text-right">
                   <p className="font-pixel text-[10px] leading-5 text-cream">
-                    {formatCzk(debt.amount)}
+                    {formatCzkFromCents(debt.amountCents)}
                   </p>
 
                   <PixelBadge

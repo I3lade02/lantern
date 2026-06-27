@@ -5,6 +5,7 @@ import {
   ReceiptText,
   Sparkles,
   UserPlus,
+  HandCoins,
 } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -23,6 +24,8 @@ const activityIcons: Record<ActivityType, typeof Sparkles> = {
   expense_created: ReceiptText,
   expense_updated: ReceiptText,
   debt_paid: Sparkles,
+  debts_calculated: HandCoins,
+  debt_resolved: HandCoins,
   dice_rolled: Dices,
   game_added: Gamepad2,
   member_joined: UserPlus,
