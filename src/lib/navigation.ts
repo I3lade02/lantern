@@ -6,6 +6,7 @@ import {
     LayoutDashboard,
     ReceiptText,
     UsersRound,
+    Gamepad2,
 } from "lucide-react";
 
 export type AppNavigationItem = {
@@ -51,5 +52,11 @@ export const APP_NAVIGATION: AppNavigationItem[] = [
         label: "Členové",
         shortLabel: "Parta",
         icon: UsersRound,
+    },
+    {
+        href: "/games",
+        label: "Hry",
+        shortLabel: "Hry",
+        icon: Gamepad2,
     },
 ];

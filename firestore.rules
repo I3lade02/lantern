@@ -1024,6 +1024,105 @@ function isValidDiceRollCreate(rollId) {
     && request.resource.data.createdAt == request.time;
 }
 
+function hasValidGameShape(data) {
+  return data.keys().hasAll([
+      "id",
+      "title",
+      "category",
+      "minPlayers",
+      "maxPlayers",
+      "playTimeMinutes",
+      "complexity",
+      "ownership",
+      "ownerName",
+      "notes",
+      "isAvailable",
+      "addedById",
+      "addedByName",
+      "createdAt",
+      "updatedAt"
+    ])
+    && data.keys().hasOnly([
+      "id",
+      "title",
+      "category",
+      "minPlayers",
+      "maxPlayers",
+      "playTimeMinutes",
+      "complexity",
+      "ownership",
+      "ownerName",
+      "notes",
+      "isAvailable",
+      "addedById",
+      "addedByName",
+      "createdAt",
+      "updatedAt"
+    ])
+    && data.id is string
+    && data.title is string
+    && data.title.size() >= 2
+    && data.title.size() <= 100
+    && data.category in [
+      "boardgame",
+      "cardgame",
+      "rpg",
+      "party",
+      "miniatures",
+      "other"
+    ]
+    && data.minPlayers is int
+    && data.minPlayers >= 1
+    && data.minPlayers <= 20
+    && data.maxPlayers is int
+    && data.maxPlayers >= data.minPlayers
+    && data.maxPlayers <= 20
+    && data.playTimeMinutes is int
+    && data.playTimeMinutes >= 5
+    && data.playTimeMinutes <= 600
+    && data.complexity is int
+    && data.complexity >= 1
+    && data.complexity <= 5
+    && data.ownership in [
+      "party",
+      "member",
+      "borrowed"
+    ]
+    && data.ownerName is string
+    && data.ownerName.size() >= 2
+    && data.ownerName.size() <= 80
+    && data.notes is string
+    && data.notes.size() <= 1000
+    && data.isAvailable is bool
+    && data.addedById is string
+    && data.addedById.size() > 0
+    && data.addedByName is string
+    && data.addedByName.size() >= 2
+    && data.addedByName.size() <= 24
+    && data.createdAt is timestamp
+    && data.updatedAt is timestamp;
+}
+
+function isValidGameCreate(gameId) {
+  return isAdmin()
+    && hasValidGameShape(request.resource.data)
+    && request.resource.data.id == gameId
+    && request.resource.data.addedById == request.auth.uid
+    && request.resource.data.createdAt == request.time
+    && request.resource.data.updatedAt == request.time;
+}
+
+function isValidGameUpdate(gameId) {
+  return isAdmin()
+    && hasValidGameShape(request.resource.data)
+    && request.resource.data.id == gameId
+    && request.resource.data.id == resource.data.id
+    && request.resource.data.addedById == resource.data.addedById
+    && request.resource.data.addedByName == resource.data.addedByName
+    && request.resource.data.createdAt == resource.data.createdAt
+    && request.resource.data.updatedAt == request.time;
+}
+
     match /users/{userId} {
   allow get, list: if hasApprovedEmail();
 
@@ -1062,6 +1161,16 @@ function isValidDiceRollCreate(rollId) {
         allow delete: if false;
       }
     }
+
+    match /games/{gameId} {
+  allow get, list: if hasApprovedEmail();
+
+  allow create: if isValidGameCreate(gameId);
+
+  allow update: if isValidGameUpdate(gameId);
+
+  allow delete: if false;
+}
 
     match /expenses/{expenseId} {
       allow get, list: if hasApprovedEmail();

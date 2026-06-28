@@ -6,8 +6,8 @@ import {
   Dices,
   MapPin,
   Pencil,
-  ReceiptText,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 
 import { MemberAvatar } from "@/components/layout/member-avatar";
@@ -17,13 +17,14 @@ import { PixelBadge } from "@/components/ui/pixel-badge";
 import { PixelButton } from "@/components/ui/pixel-button";
 import { PixelPanel } from "@/components/ui/pixel-panel";
 import { useAuth } from "@/features/auth/auth-provider";
+import { SessionDebtSummary } from "@/features/debts/session-debt-summary";
+import { SessionExpensesPanel } from "@/features/expenses/session-expense-panel";
+import { SessionGamePlanner } from "@/features/games/session-game-planner";
 import { useMembers } from "@/features/members/use-members";
 import { SessionForm } from "@/features/sessions/session-form";
 import { SessionRsvpActions } from "@/features/sessions/session-rsvp-actions";
 import { useSessionDetail } from "@/features/sessions/use-session-detail";
 import { formatSessionDate } from "@/lib/formatters";
-import { SessionExpensesPanel } from "../expenses/session-expense-panel";
-import { SessionDebtSummary } from "../debts/session-debt-summary";
 import type {
   SessionRsvpStatus,
   SessionStatus,
@@ -77,14 +78,17 @@ export function SessionDetailView({
 }: SessionDetailViewProps) {
   const { profile, profileStatus, user } = useAuth();
 
-  const { session, rsvps, isLoading, error } = useSessionDetail(
-    sessionId,
-    profileStatus === "ready",
-  );
+  const {
+    session,
+    rsvps,
+    isLoading,
+    error,
+  } = useSessionDetail(sessionId, profileStatus === "ready");
 
-  const { members, isLoading: areMembersLoading } = useMembers(
-    profileStatus === "ready",
-  );
+  const {
+    members,
+    isLoading: areMembersLoading,
+  } = useMembers(profileStatus === "ready");
 
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -266,11 +270,15 @@ export function SessionDetailView({
             RSVP PARTY
           </p>
 
-          <div className="flex gap-2">
-            <PixelBadge tone="moss">{session.rsvpSummary.going} JDE</PixelBadge>
+          <div className="flex flex-wrap justify-end gap-2">
+            <PixelBadge tone="moss">
+              {session.rsvpSummary.going} JDE
+            </PixelBadge>
+
             <PixelBadge tone="amber">
               {session.rsvpSummary.maybe} MOŽNÁ
             </PixelBadge>
+
             <PixelBadge tone="wine">
               {session.rsvpSummary.notGoing} NEJDE
             </PixelBadge>
@@ -303,7 +311,9 @@ export function SessionDetailView({
                     </p>
 
                     <p className="mt-1 text-xs text-cream-muted">
-                      {member.role === "admin" ? "Správce party" : "Člen party"}
+                      {member.role === "admin"
+                        ? "Správce party"
+                        : "Člen party"}
                     </p>
                   </div>
                 </div>
@@ -322,27 +332,7 @@ export function SessionDetailView({
       </section>
 
       <div className="grid gap-6 xl:grid-cols-3">
-        <SessionExpensesPanel
-          sessionId={session.id}
-          sessionTitle={session.title}
-        />
-
-        <SessionDebtSummary sessionId={session.id} />
-
-        <PixelPanel tone="deep">
-          <div className="grid size-11 place-items-center border-2 border-outline bg-panel-muted text-moss-light shadow-pixel-sm">
-            <ReceiptText aria-hidden="true" size={20} />
-          </div>
-
-          <h2 className="mt-5 font-pixel text-[11px] leading-7 text-cream">
-            Útraty session
-          </h2>
-
-          <p className="mt-3 text-sm leading-6 text-cream-muted">
-            V dalším kroku sem napojíme pizzu, limonády, snacky a rozdělení
-            mezi hráče.
-          </p>
-        </PixelPanel>
+        <SessionGamePlanner session={session} />
 
         <PixelPanel tone="deep">
           <div className="grid size-11 place-items-center border-2 border-outline bg-panel-muted text-wine-light shadow-pixel-sm">
@@ -354,11 +344,18 @@ export function SessionDetailView({
           </h2>
 
           <p className="mt-3 text-sm leading-6 text-cream-muted">
-            Dice Lab později uloží hody přímo k této session, včetně critical
-            hitů a critical failů.
+            Dice Lab už umí ukládat hody přímo k session. Otevři kostky,
+            vyber tuto session a každý critical hit i fail zůstane v kronice.
           </p>
         </PixelPanel>
+
+        <SessionDebtSummary sessionId={session.id} />
       </div>
+
+      <SessionExpensesPanel
+        sessionId={session.id}
+        sessionTitle={session.title}
+      />
 
       {isAdmin ? (
         <SessionForm
