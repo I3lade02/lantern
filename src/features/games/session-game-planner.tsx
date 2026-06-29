@@ -9,7 +9,6 @@ import {
   X,
 } from "lucide-react";
 
-import { PixelBadge } from "@/components/ui/pixel-badge";
 import { PixelButton } from "@/components/ui/pixel-button";
 import { PixelPanel } from "@/components/ui/pixel-panel";
 import { toast } from "@/components/ui/pixel-toast";
@@ -170,7 +169,7 @@ export function SessionGamePlanner({
               {isAdmin ? (
                 <PixelButton
                   aria-label={`Odebrat hru ${game.title} z plánu`}
-                  className="!px-3"
+                  className="px-3!"
                   disabled={isSubmitting}
                   onClick={() => handleRemoveGame(game.id)}
                   size="sm"
@@ -187,7 +186,7 @@ export function SessionGamePlanner({
       {isAdmin ? (
         <div className="mt-5 grid gap-3 border-t-2 border-outline-soft pt-5">
           <select
-            className="w-full border-2 border-outline bg-panel px-3 py-3 text-sm text-cream shadow-[inset_2px_2px_0_rgb(0_0_0_/_0.35)] focus:border-amber focus:outline-none"
+            className="w-full border-2 border-outline bg-panel px-3 py-3 text-sm text-cream shadow-[inset_2px_2px_0_rgb(0_0_0/0.35)] focus:border-amber focus:outline-none"
             disabled={isSubmitting || availableGames.length === 0}
             value={selectedGameId}
             onChange={(event) => setSelectedGameId(event.target.value)}

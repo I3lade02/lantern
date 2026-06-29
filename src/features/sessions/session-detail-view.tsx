@@ -7,7 +7,6 @@ import {
   MapPin,
   Pencil,
   UserRound,
-  UsersRound,
 } from "lucide-react";
 
 import { MemberAvatar } from "@/components/layout/member-avatar";
