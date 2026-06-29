@@ -12,6 +12,9 @@ import { PwaLaunchScreen } from "@/components/pwa/pwa-launch-screen";
 import { PwaServiceWorker } from "@/components/pwa/pwa-service-worker";
 import { PixelToast } from "@/components/ui/pixel-toast";
 import { AuthProvider } from "@/features/auth/auth-provider";
+import {
+  NotificationsProvider,
+} from "@/features/notifications/notifications-provider";
 
 import "./globals.css";
 
@@ -65,13 +68,15 @@ export default function RootLayout({
     >
       <body>
         <AuthProvider>
-          <PwaServiceWorker />
-          <PwaLaunchScreen />
+          <NotificationsProvider>
+            <PwaServiceWorker />
+            <PwaLaunchScreen />
 
-          {children}
+            {children}
 
-          <PwaInstallButton />
-          <PixelToast />
+            <PwaInstallButton />
+            <PixelToast />
+          </NotificationsProvider>
         </AuthProvider>
       </body>
     </html>

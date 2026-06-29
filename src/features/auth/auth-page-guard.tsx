@@ -4,25 +4,46 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { LoadingState } from "@/components/ui/loading-state";
-import { useAuth } from "./auth-provider";
+import { useAuth } from "@/features/auth/auth-provider";
 
 type AuthPageGuardProps = {
-    children: React.ReactNode;
+  children: React.ReactNode;
 };
 
-export function AuthPageGuard({ children }: AuthPageGuardProps) {
-    const router = useRouter();
-    const { status } = useAuth();
+export function AuthPageGuard({
+  children,
+}: AuthPageGuardProps) {
+  const router = useRouter();
 
-    useEffect(() => {
-        if (status === "authenticated") {
-            router.replace("/dashboard");
-        }
-    }, [router, status]);
+  const {
+    accessStatus,
+    status,
+  } = useAuth();
 
-    if (status === "loading" || status === "authenticated") {
-        return <LoadingState label="Rozsvěcím lucernu..." />;
+  useEffect(() => {
+    if (status !== "authenticated") {
+      return;
     }
 
-    return <>{children}</>;
+    if (accessStatus === "approved") {
+      router.replace("/dashboard");
+      return;
+    }
+
+    if (
+      accessStatus === "pending" ||
+      accessStatus === "denied"
+    ) {
+      router.replace("/cekani-na-schvaleni");
+    }
+  }, [accessStatus, router, status]);
+
+  if (
+    status === "loading" ||
+    status === "authenticated"
+  ) {
+    return <LoadingState label="Rozsvěcím lucernu…" />;
+  }
+
+  return <>{children}</>;
 }

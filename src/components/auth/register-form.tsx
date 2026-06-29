@@ -25,11 +25,14 @@ const registerSchema = z
         /^[\p{L}\p{N} _-]+$/u,
         "Použij písmena, čísla, mezery, pomlčky nebo podtržítka.",
       ),
+
     email: z.string().email("Zadej platný e-mail."),
+
     password: z
       .string()
       .min(8, "Heslo musí mít alespoň 8 znaků.")
       .max(128, "Heslo je příliš dlouhé."),
+
     confirmPassword: z.string(),
   })
   .refine((values) => values.password === values.confirmPassword, {
@@ -41,7 +44,9 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
 
   const {
     register,
@@ -55,14 +60,23 @@ export function RegisterForm() {
     setIsSubmitting(true);
 
     try {
-      await registerWithEmail({
+      const result = await registerWithEmail({
         displayName: values.displayName,
         email: values.email,
         password: values.password,
       });
 
-      toast.success("Účet vytvořen. Lucerna svítí!");
-      router.replace("/dashboard");
+      if (result.verificationEmailSent) {
+        toast.success(
+          "Žádost byla odeslána. Ověř svůj e-mail.",
+        );
+      } else {
+        toast.success(
+          "Žádost byla odeslána. Ověřovací e-mail můžeš poslat z čekárny znovu.",
+        );
+      }
+
+      router.replace("/cekani-na-schvaleni");
     } catch (error) {
       toast.error(getAuthErrorMessage(error));
     } finally {
@@ -123,7 +137,9 @@ export function RegisterForm() {
         variant="moss"
       >
         <UserPlus aria-hidden="true" size={16} />
-        {isSubmitting ? "Zakládám účet…" : "Vytvořit účet"}
+        {isSubmitting
+          ? "Zakládám žádost…"
+          : "Požádat o připojení"}
       </PixelButton>
 
       <p className="text-center text-sm leading-6 text-cream-muted">

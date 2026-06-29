@@ -16,6 +16,7 @@ import { MemberCard } from "@/features/members/member-card";
 import { MemberProfileModal } from "@/features/members/member-profile-modal";
 import { MemberRoleActions } from "@/features/members/member-role-actions";
 import { useMembers } from "@/features/members/use-members";
+import { PendingJoinRequestsPanel } from "../join-requests/pending-join-requests-panel";
 import type { UserProfile } from "@/types/user";
 
 export function MemberOverview() {
@@ -153,6 +154,8 @@ export function MemberOverview() {
           </PixelButton>
         </div>
       </PixelPanel>
+
+      {isAdmin ? <PendingJoinRequestsPanel /> : null}
 
       {isAdmin ? (
         <PixelPanel tone="muted">
