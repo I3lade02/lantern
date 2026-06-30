@@ -1355,6 +1355,25 @@ match /joinRequests/{requestId} {
       allow delete: if false;
     }
 
+    match /polls/{pollId} {
+  allow get, list: if hasApprovedEmail();
+
+  // Ankety mění jen serverové API přes Firebase Admin SDK.
+  allow create, update, delete: if false;
+
+  match /votes/{userId} {
+    // Člen smí načíst výhradně svůj hlas.
+    // Nemůže tak zjistit, kdo zvolil jakou možnost.
+    allow get: if hasApprovedEmail()
+      && request.auth.uid == userId;
+
+    allow list: if false;
+
+    // Hlas zapisuje server, ne přímo prohlížeč.
+    allow create, update, delete: if false;
+  }
+}
+
     match /{document=**} {
       allow read, write: if false;
     }
