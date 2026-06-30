@@ -144,15 +144,13 @@ export function GameOverview() {
             </p>
           </div>
 
-          {isAdmin ? (
-            <PixelButton
-              onClick={() => setModalState({ mode: "create" })}
-              variant="moss"
-            >
-              <Plus aria-hidden="true" size={16} />
+          <PixelButton
+            onClick={() => setModalState({ mode: "create" })}
+            variant="moss"
+          >
+            <Plus aria-hidden="true" size={16} />
               Přidat hru
-            </PixelButton>
-          ) : null}
+          </PixelButton>
         </div>
 
         <div className="mt-6 grid gap-4 border-t-2 border-outline pt-5 lg:grid-cols-[minmax(0,1fr)_13rem_10rem]">
@@ -250,9 +248,7 @@ export function GameOverview() {
           <EmptyState
             description={
               games.length === 0
-                ? isAdmin
-                  ? "Herní police je zatím prázdná. Přidej první titul pro partu."
-                  : "Herní police je zatím prázdná. Admin sem může přidat první titul."
+                ? "Herní police je zatím prázdná. Přidej první titul pro partu."
                 : "Těmto filtrům momentálně neodpovídá žádná hra."
             }
             icon={Gamepad2}

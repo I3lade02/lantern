@@ -201,12 +201,10 @@ export function PollsPageContent() {
         </section>
 
         <div className="mt-8 grid gap-8">
-          {isAdmin ? (
-            <PollCreateForm
-              isSubmitting={isCreating}
-              onCreate={handleCreate}
-            />
-          ) : null}
+          <PollCreateForm
+            isSubmitting={isCreating}
+            onCreate={handleCreate}
+          />
 
           <section>
             <div className="flex flex-wrap items-center justify-between gap-4">

@@ -203,7 +203,7 @@ export function PollCreateForm({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="font-pixel text-[9px] leading-5 text-amber-light">
-            ADMIN TOOL
+            PARTY TOOL
           </p>
 
           <h2 className="mt-2 font-pixel text-[12px] leading-7 text-cream">

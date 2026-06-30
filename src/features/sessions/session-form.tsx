@@ -68,6 +68,7 @@ export function SessionForm({
 
   const actorId = user?.uid ?? "";
   const isEditMode = Boolean(session);
+  const isAdmin = profile?.role === "admin";
 
   const defaultValues = useMemo<SessionFormValues>(
     () => ({
@@ -96,7 +97,14 @@ export function SessionForm({
       return;
     }
 
-    const host = members.find((member) => member.id === values.hostId);
+    const selectedHostId =
+      !isEditMode && !isAdmin
+        ? actorId
+        : values.hostId;
+
+    const host = members.find(
+      (member) => member.id === selectedHostId,
+    );
 
     if (!host) {
       toast.error("Vybraného hostitele se nepodařilo najít.");

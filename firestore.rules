@@ -169,17 +169,27 @@ function isValidAdminRoleUpdate(userId) {
         && data.updatedAt is timestamp;
     }
 
-    function isValidSessionCreate(sessionId) {
-      return isAdmin()
-        && hasValidSessionShape(request.resource.data)
-        && request.resource.data.id == sessionId
-        && request.resource.data.rsvpSummary.going == 0
-        && request.resource.data.rsvpSummary.maybe == 0
-        && request.resource.data.rsvpSummary.notGoing == 0
-        && request.resource.data.plannedGameIds.size() == 0
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
-    }
+function isValidSessionCreate(sessionId) {
+  return hasApprovedEmail()
+    && hasValidSessionShape(request.resource.data)
+    && request.resource.data.id == sessionId
+    && (
+      isAdmin()
+      || (
+        request.resource.data.hostId == request.auth.uid
+        && request.resource.data.hostName
+          == get(
+            /databases/$(database)/documents/users/$(request.auth.uid)
+          ).data.displayName
+      )
+    )
+    && request.resource.data.rsvpSummary.going == 0
+    && request.resource.data.rsvpSummary.maybe == 0
+    && request.resource.data.rsvpSummary.notGoing == 0
+    && request.resource.data.plannedGameIds.size() == 0
+    && request.resource.data.createdAt == request.time
+    && request.resource.data.updatedAt == request.time;
+}
 
     function isValidAdminSessionUpdate(sessionId) {
       return isAdmin()
@@ -1104,10 +1114,14 @@ function hasValidGameShape(data) {
 }
 
 function isValidGameCreate(gameId) {
-  return isAdmin()
+  return hasApprovedEmail()
     && hasValidGameShape(request.resource.data)
     && request.resource.data.id == gameId
     && request.resource.data.addedById == request.auth.uid
+    && request.resource.data.addedByName
+      == get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data.displayName
     && request.resource.data.createdAt == request.time
     && request.resource.data.updatedAt == request.time;
 }

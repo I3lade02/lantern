@@ -7,7 +7,7 @@ import {
 import { getFirebaseAdminDb } from "@/lib/firebase-admin";
 import {
   PollAuthorizationError,
-  requirePollAdmin,
+  requireApprovedPartyUser,
 } from "@/lib/require-approved-user";
 import {
   POLL_TYPES,
@@ -248,7 +248,7 @@ function createErrorResponse(error: unknown) {
 
 export async function POST(request: Request) {
   try {
-    const admin = await requirePollAdmin(request);
+    const creator = await requireApprovedPartyUser(request);
 
     const body = (await request.json()) as CreatePollBody;
 
@@ -295,8 +295,8 @@ export async function POST(request: Request) {
 
       sessionId,
 
-      createdById: admin.id,
-      createdByName: admin.displayName,
+      createdById: creator.id,
+      createdByName: creator.displayName,
 
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),

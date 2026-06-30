@@ -27,14 +27,12 @@ function sortByStartAtDescending(sessions: Session[]): Session[] {
 }
 
 export function SessionOverview() {
-  const { profile, profileStatus } = useAuth();
+  const { profileStatus } = useAuth();
   const { sessions, isLoading, error } = useSessions(
     profileStatus === "ready",
   );
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-
-  const isAdmin = profile?.role === "admin";
 
   const upcomingSessions = useMemo(
     () =>
@@ -101,12 +99,10 @@ export function SessionOverview() {
           </p>
         </div>
 
-        {isAdmin ? (
-          <PixelButton onClick={() => setIsCreateOpen(true)} variant="moss">
-            <CalendarPlus aria-hidden="true" size={16} />
-            Nová session
-          </PixelButton>
-        ) : null}
+        <PixelButton onClick={() => setIsCreateOpen(true)} variant="moss">
+          <CalendarPlus aria-hidden="true" size={16} />
+          Nová session
+        </PixelButton>
       </section>
 
       <section>
@@ -115,11 +111,7 @@ export function SessionOverview() {
         </p>
 
         <SessionList
-          emptyDescription={
-            isAdmin
-              ? "Zatím není nic naplánováno. Vytvoř první game night pro partu."
-              : "Zatím není naplánovaná žádná další game night."
-          }
+          emptyDescription="Zatím není nic naplánováno. Vytvoř první game night pro partu."
           emptyTitle="Session tabule je prázdná"
           sessions={upcomingSessions}
         />
@@ -137,13 +129,11 @@ export function SessionOverview() {
         />
       </section>
 
-      {isAdmin ? (
-        <SessionForm
-          key={isCreateOpen ? "create-session-open" : "create-session-closed"}
-          onClose={() => setIsCreateOpen(false)}
-          open={isCreateOpen}
-        />
-      ) : null}
+      <SessionForm
+        key={isCreateOpen ? "create-session-open" : "create-session-closed"}
+        onClose={() => setIsCreateOpen(false)}
+        open={isCreateOpen}
+      />
     </div>
   );
 }
