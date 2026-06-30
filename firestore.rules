@@ -33,6 +33,145 @@ service cloud.firestore {
       ];
     }
 
+    function hasValidChatMessageKeys(data) {
+  return data.keys().hasAll([
+      "id",
+      "authorId",
+      "authorName",
+      "authorAvatarColor",
+      "type",
+      "text",
+      "isDeleted",
+      "createdAt",
+      "updatedAt",
+      "editedAt",
+      "deletedAt",
+      "deletedById"
+    ])
+    && data.keys().hasOnly([
+      "id",
+      "authorId",
+      "authorName",
+      "authorAvatarColor",
+      "type",
+      "text",
+      "isDeleted",
+      "createdAt",
+      "updatedAt",
+      "editedAt",
+      "deletedAt",
+      "deletedById"
+    ]);
+}
+
+function hasMatchingChatAuthor(data) {
+  let profilePath =
+    /databases/$(database)/documents/users/$(request.auth.uid);
+
+  return exists(profilePath)
+    && data.authorId == request.auth.uid
+    && data.authorName == get(profilePath).data.displayName
+    && data.authorAvatarColor == get(profilePath).data.avatarColor;
+}
+
+function hasValidChatAvatarColor(data) {
+  return data.authorAvatarColor in [
+    "amber",
+    "moss",
+    "wine",
+    "cream"
+  ];
+}
+
+function isValidChatMessageCreate(messageId) {
+  return hasApprovedEmail()
+    && hasValidChatMessageKeys(request.resource.data)
+    && request.resource.data.id == messageId
+    && request.resource.data.authorId is string
+    && request.resource.data.authorName is string
+    && request.resource.data.authorName.size() >= 2
+    && request.resource.data.authorName.size() <= 24
+    && hasValidChatAvatarColor(request.resource.data)
+    && request.resource.data.type == "message"
+    && request.resource.data.text is string
+    && request.resource.data.text.size() >= 1
+    && request.resource.data.text.size() <= 1500
+    && request.resource.data.isDeleted == false
+    && request.resource.data.createdAt == request.time
+    && request.resource.data.updatedAt == request.time
+    && request.resource.data.editedAt == null
+    && request.resource.data.deletedAt == null
+    && request.resource.data.deletedById == null
+    && hasMatchingChatAuthor(request.resource.data);
+}
+
+function isValidOwnChatMessageEdit(messageId) {
+  return hasApprovedEmail()
+    && request.auth.uid == resource.data.authorId
+    && resource.data.id == messageId
+    && resource.data.type == "message"
+    && resource.data.isDeleted == false
+    && hasValidChatMessageKeys(request.resource.data)
+    && request.resource.data.id == resource.data.id
+    && request.resource.data.authorId == resource.data.authorId
+    && request.resource.data.authorName == resource.data.authorName
+    && request.resource.data.authorAvatarColor
+      == resource.data.authorAvatarColor
+    && request.resource.data.type == resource.data.type
+    && request.resource.data.text is string
+    && request.resource.data.text.size() >= 1
+    && request.resource.data.text.size() <= 1500
+    && request.resource.data.isDeleted == false
+    && request.resource.data.createdAt == resource.data.createdAt
+    && request.resource.data.updatedAt == request.time
+    && request.resource.data.editedAt == request.time
+    && request.resource.data.deletedAt == null
+    && request.resource.data.deletedById == null
+    && request.resource.data
+      .diff(resource.data)
+      .affectedKeys()
+      .hasOnly([
+        "text",
+        "updatedAt",
+        "editedAt"
+      ]);
+}
+
+function isValidChatMessageSoftDelete(messageId) {
+  return hasApprovedEmail()
+    && resource.data.id == messageId
+    && resource.data.type == "message"
+    && resource.data.isDeleted == false
+    && (
+      request.auth.uid == resource.data.authorId
+      || isAdmin()
+    )
+    && hasValidChatMessageKeys(request.resource.data)
+    && request.resource.data.id == resource.data.id
+    && request.resource.data.authorId == resource.data.authorId
+    && request.resource.data.authorName == resource.data.authorName
+    && request.resource.data.authorAvatarColor
+      == resource.data.authorAvatarColor
+    && request.resource.data.type == resource.data.type
+    && request.resource.data.text == ""
+    && request.resource.data.isDeleted == true
+    && request.resource.data.createdAt == resource.data.createdAt
+    && request.resource.data.updatedAt == request.time
+    && request.resource.data.editedAt == resource.data.editedAt
+    && request.resource.data.deletedAt == request.time
+    && request.resource.data.deletedById == request.auth.uid
+    && request.resource.data
+      .diff(resource.data)
+      .affectedKeys()
+      .hasOnly([
+        "text",
+        "isDeleted",
+        "updatedAt",
+        "deletedAt",
+        "deletedById"
+      ]);
+}
+
     function hasValidProfileShape(data) {
       return data.keys().hasAll([
           "id",
@@ -1386,6 +1525,22 @@ match /joinRequests/{requestId} {
     // Hlas zapisuje server, ne přímo prohlížeč.
     allow create, update, delete: if false;
   }
+}
+
+    match /chatRooms/{roomId}/messages/{messageId} {
+  allow get, list: if roomId == "global"
+    && hasApprovedEmail();
+
+  allow create: if roomId == "global"
+    && isValidChatMessageCreate(messageId);
+
+  allow update: if roomId == "global"
+    && (
+      isValidOwnChatMessageEdit(messageId)
+      || isValidChatMessageSoftDelete(messageId)
+    );
+
+  allow delete: if false;
 }
 
     match /{document=**} {
