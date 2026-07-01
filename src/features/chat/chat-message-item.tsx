@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Check,
+  LoaderCircle,
   Pencil,
   Save,
   Trash2,
@@ -11,7 +11,10 @@ import {
 
 import { PixelButton } from "@/components/ui/pixel-button";
 import { ChatLinkifiedText } from "@/features/chat/chat-linkified-text";
-import type { ChatMessage } from "@/types/chat";
+import {
+  CHAT_MAX_MESSAGE_LENGTH,
+  type ChatMessage,
+} from "@/types/chat";
 import type { AvatarColor } from "@/types/user";
 
 type ChatMessageItemProps = {
@@ -90,6 +93,7 @@ export function ChatMessageItem({
 }: ChatMessageItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftText, setDraftText] = useState(message.text);
+
   const [isSubmittingEdit, setIsSubmittingEdit] =
     useState(false);
 
@@ -135,53 +139,56 @@ export function ChatMessageItem({
     setIsEditing(false);
   }
 
+  if (message.isDeleted) {
+    return (
+      <article className="flex justify-center px-4 py-3">
+        <div className="max-w-sm border border-outline bg-panel-deep px-4 py-2 text-center text-xs italic leading-5 text-cream-muted">
+          Tato zpráva byla smazána.
+        </div>
+      </article>
+    );
+  }
+
   return (
     <article
       className={[
-        "flex gap-3 border-b-2 border-outline-soft px-4 py-4",
-        isOwnMessage ? "bg-panel/40" : "bg-transparent",
+        "group flex w-full items-end gap-2 px-3 py-1.5 sm:px-5",
+        isOwnMessage ? "justify-end" : "justify-start",
       ].join(" ")}
     >
+      {!isOwnMessage ? (
+        <div
+          aria-hidden="true"
+          className={[
+            "grid size-9 shrink-0 place-items-center border-2 border-outline shadow-pixel-sm",
+            avatarColorClasses[message.authorAvatarColor],
+          ].join(" ")}
+        >
+          <span className="font-pixel text-[8px]">
+            {getInitials(message.authorName)}
+          </span>
+        </div>
+      ) : null}
+
       <div
-        aria-hidden="true"
         className={[
-          "grid size-10 shrink-0 place-items-center border-2 border-outline",
-          avatarColorClasses[message.authorAvatarColor],
+          "flex max-w-[84%] flex-col sm:max-w-[70%]",
+          isOwnMessage ? "items-end" : "items-start",
         ].join(" ")}
       >
-        <span className="font-pixel text-[9px]">
-          {getInitials(message.authorName)}
-        </span>
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="font-semibold text-cream">
+        {!isOwnMessage ? (
+          <p className="mb-1 px-1 text-xs font-semibold text-cream-muted">
             {message.authorName}
           </p>
+        ) : null}
 
-          <span className="text-xs text-cream-muted">
-            {formatMessageTime(message.createdAt)}
-          </span>
-
-          {message.editedAt && !message.isDeleted ? (
-            <span className="font-pixel text-[7px] text-cream-muted">
-              UPRAVENO
-            </span>
-          ) : null}
-        </div>
-
-        {message.isDeleted ? (
-          <p className="mt-2 italic leading-7 text-cream-muted">
-            Tato zpráva byla smazána.
-          </p>
-        ) : isEditing ? (
-          <div className="mt-3">
+        {isEditing ? (
+          <div className="w-full border-2 border-amber bg-panel p-3 shadow-pixel-sm">
             <textarea
               autoFocus
-              className="min-h-28 w-full resize-y border-2 border-amber bg-panel-deep px-3 py-3 text-sm leading-6 text-cream outline-none placeholder:text-cream-muted"
+              className="min-h-28 w-full resize-y border-2 border-outline bg-panel-deep px-3 py-3 text-sm leading-6 text-cream outline-none placeholder:text-cream-muted focus:border-amber disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isSubmittingEdit}
-              maxLength={1500}
+              maxLength={CHAT_MAX_MESSAGE_LENGTH}
               onChange={(event) =>
                 setDraftText(event.target.value)
               }
@@ -211,7 +218,14 @@ export function ChatMessageItem({
                 variant="moss"
               >
                 {isSubmittingEdit ? (
-                  "Ukládám…"
+                  <>
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="animate-spin"
+                      size={14}
+                    />
+                    Ukládám…
+                  </>
                 ) : (
                   <>
                     <Save aria-hidden="true" size={14} />
@@ -222,45 +236,89 @@ export function ChatMessageItem({
             </div>
           </div>
         ) : (
-          <p className="mt-2 whitespace-pre-wrap wrap-break-word text-sm leading-7 text-cream">
-            <ChatLinkifiedText text={message.text} />
-          </p>
+          <div
+            className={[
+              "w-fit max-w-full border-2 px-4 py-3 shadow-pixel-sm",
+              "text-sm leading-6",
+              isOwnMessage
+                ? [
+                    "rounded-2xl rounded-br-sm bg-amber text-void",
+                    "[&_a]:text-wine-dark!",
+                    "[&_a]:decoration-wine-dark!",
+                    "[&_a:hover]:text-void!",
+                  ].join(" ")
+                : [
+                    "rounded-2xl rounded-bl-sm bg-panel text-cream",
+                    "border-outline",
+                  ].join(" "),
+            ].join(" ")}
+          >
+            <p className="whitespace-pre-wrap wrap-break-word">
+              <ChatLinkifiedText text={message.text} />
+            </p>
+
+            <div
+              className={[
+                "mt-2 flex items-center gap-2 text-[10px]",
+                isOwnMessage
+                  ? "justify-end text-void/70"
+                  : "justify-end text-cream-muted",
+              ].join(" ")}
+            >
+              {message.editedAt ? (
+                <span className="font-pixel text-[7px]">
+                  UPRAVENO
+                </span>
+              ) : null}
+
+              <span>{formatMessageTime(message.createdAt)}</span>
+
+              {isSaving ? (
+                <LoaderCircle
+                  aria-label="Ukládám změnu zprávy"
+                  className="animate-spin"
+                  size={12}
+                />
+              ) : null}
+            </div>
+          </div>
         )}
 
-        {!message.isDeleted && !isEditing && (canEdit || canDelete) ? (
-          <div className="mt-3 flex flex-wrap gap-2">
+        {!isEditing && (canEdit || canDelete) ? (
+          <div
+            className={[
+              "mt-1.5 flex items-center gap-3 px-1",
+              "transition-opacity sm:opacity-0 sm:group-hover:opacity-100",
+              "sm:group-focus-within:opacity-100",
+              isOwnMessage ? "justify-end" : "justify-start",
+            ].join(" ")}
+          >
             {canEdit ? (
               <button
-                className="inline-flex items-center gap-1 font-pixel text-[8px] text-cream-muted transition hover:text-amber-light"
+                className="inline-flex items-center gap-1 font-pixel text-[7px] text-cream-muted transition hover:text-amber-light disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isSaving}
                 onClick={() => setIsEditing(true)}
                 type="button"
               >
-                <Pencil aria-hidden="true" size={13} />
+                <Pencil aria-hidden="true" size={12} />
                 UPRAVIT
               </button>
             ) : null}
 
             {canDelete ? (
               <button
-                className="inline-flex items-center gap-1 font-pixel text-[8px] text-wine-light transition hover:text-wine"
+                className="inline-flex items-center gap-1 font-pixel text-[7px] text-wine-light transition hover:text-wine disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isSaving}
                 onClick={() => onRequestDelete(message)}
                 type="button"
               >
-                <Trash2 aria-hidden="true" size={13} />
+                <Trash2 aria-hidden="true" size={12} />
                 SMAZAT
               </button>
             ) : null}
           </div>
         ) : null}
       </div>
-
-      {isSaving ? (
-        <div className="shrink-0 pt-1 text-moss-light">
-          <Check aria-hidden="true" size={16} />
-        </div>
-      ) : null}
     </article>
   );
 }
