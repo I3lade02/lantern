@@ -1,38 +1,42 @@
 import type { Timestamp } from "firebase/firestore";
 
 export const NOTIFICATION_ICON_KINDS = [
-    "session",
-    "expense",
-    "debt",
-    "payment",
-    "game",
-    "dice",
-    "member",
-    "other",
+  "session",
+  "expense",
+  "debt",
+  "payment",
+  "game",
+  "dice",
+  "member",
+  "other",
 ] as const;
 
-export type NotificationIconKind = (typeof NOTIFICATION_ICON_KINDS)[number];
+export type NotificationIconKind =
+  (typeof NOTIFICATION_ICON_KINDS)[number];
 
 export type NotificationState = {
-    id: "main";
-    lastSeenAt: Timestamp | null;
-    updatedAt: Timestamp | null;
+  id: "main";
+
+  lastSeenAt?: Timestamp | null;
+  lastSeenChatAt?: Timestamp | null;
+
+  updatedAt: Timestamp | null;
 };
 
 export type InAppNotification = {
-    id: string;
+  id: string;
 
-    title: string;
-    message: string;
-    href: string;
+  title: string;
+  message: string;
+  href: string;
 
-    iconKind: NotificationIconKind;
+  iconKind: NotificationIconKind;
 
-    actorId: string;
-    actorName: string;
+  actorId: string;
+  actorName: string;
 
-    sessionId: string | null;
+  sessionId: string | null;
 
-    createdAt: Timestamp | null;
-    isUnread: boolean;
+  createdAt: Timestamp | null;
+  isUnread: boolean;
 };

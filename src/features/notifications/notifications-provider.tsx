@@ -13,13 +13,24 @@ import {
 import {
   useNotifications,
 } from "@/features/notifications/use-notifications";
-import type { InAppNotification } from "@/types/notification";
+import type { ChatMessage } from "@/types/chat";
+import type {
+  InAppNotification,
+} from "@/types/notification";
 
 type NotificationsContextValue = {
   notifications: InAppNotification[];
+
+  unreadActivityCount: number;
+  unreadChatCount: number;
   unreadCount: number;
+
+  hasUnreadChat: boolean;
+  latestUnreadChatMessage: ChatMessage | null;
+
   isLoading: boolean;
   error: string | null;
+
   markAllAsRead: () => Promise<void>;
 };
 
@@ -37,7 +48,11 @@ export function NotificationsProvider({
 
   const {
     notifications,
+    unreadActivityCount,
+    unreadChatCount,
     unreadCount,
+    hasUnreadChat,
+    latestUnreadChatMessage,
     isLoading,
     error,
   } = useNotifications(
@@ -57,9 +72,17 @@ export function NotificationsProvider({
     <NotificationsContext.Provider
       value={{
         notifications,
+
+        unreadActivityCount,
+        unreadChatCount,
         unreadCount,
+
+        hasUnreadChat,
+        latestUnreadChatMessage,
+
         isLoading,
         error,
+
         markAllAsRead,
       }}
     >

@@ -11,6 +11,7 @@ import {
   Gamepad2,
   HandCoins,
   LoaderCircle,
+  MessageCircleMore,
   ReceiptText,
   ShieldCheck,
   Sparkles,
@@ -25,6 +26,7 @@ import {
   useNotificationsContext,
 } from "@/features/notifications/notifications-provider";
 import { formatRelativeTime } from "@/lib/formatters";
+import type { ChatMessage } from "@/types/chat";
 import type {
   InAppNotification,
   NotificationIconKind,
@@ -54,6 +56,18 @@ function formatUnreadLabel(unreadCount: number): string {
   }
 
   return `${unreadCount} nových notifikací`;
+}
+
+function formatUnreadChatLabel(unreadCount: number): string {
+  if (unreadCount === 1) {
+    return "1 nová zpráva v chatu";
+  }
+
+  if (unreadCount >= 2 && unreadCount <= 4) {
+    return `${unreadCount} nové zprávy v chatu`;
+  }
+
+  return `${unreadCount} nových zpráv v chatu`;
 }
 
 type NotificationItemProps = {
@@ -112,13 +126,65 @@ function NotificationItem({
   );
 }
 
+type ChatUnreadSummaryProps = {
+  unreadChatCount: number;
+  latestMessage: ChatMessage | null;
+  onNavigate: () => void;
+};
+
+function ChatUnreadSummary({
+  unreadChatCount,
+  latestMessage,
+  onNavigate,
+}: ChatUnreadSummaryProps) {
+  return (
+    <Link
+      className="group flex gap-3 border-2 border-amber bg-panel p-4 shadow-pixel-sm transition-colors hover:bg-panel-muted"
+      href="/chat"
+      onClick={onNavigate}
+    >
+      <div className="grid size-10 shrink-0 place-items-center border-2 border-outline bg-amber text-void shadow-pixel-sm">
+        <MessageCircleMore aria-hidden="true" size={18} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <p className="font-pixel text-[9px] leading-5 text-cream">
+            NOVÉ ZPRÁVY V CHATU
+          </p>
+
+          <span className="font-pixel text-[7px] leading-4 text-amber-light">
+            NOVÉ
+          </span>
+        </div>
+
+        <p className="mt-2 text-sm leading-6 text-cream">
+          {formatUnreadChatLabel(unreadChatCount)}
+        </p>
+
+        {latestMessage ? (
+          <p className="mt-2 line-clamp-2 whitespace-pre-wrap wrap-break-word text-sm leading-6 text-cream-muted">
+            <span className="font-semibold text-cream">
+              {latestMessage.authorName}:
+            </span>{" "}
+            {latestMessage.text}
+          </p>
+        ) : null}
+      </div>
+    </Link>
+  );
+}
+
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMarkingRead, setIsMarkingRead] = useState(false);
+  const [isMarkingRead, setIsMarkingRead] =
+    useState(false);
 
   const {
     notifications,
+    unreadChatCount,
     unreadCount,
+    latestUnreadChatMessage,
     isLoading,
     error,
     markAllAsRead,
@@ -129,7 +195,7 @@ export function NotificationBell() {
 
     try {
       await markAllAsRead();
-      toast.success("Notifikace byly označeny jako přečtené.");
+      toast.success("Všechny novinky byly označeny jako přečtené.");
     } catch (markError) {
       console.error(
         "Nepodařilo se označit notifikace jako přečtené:",
@@ -144,6 +210,9 @@ export function NotificationBell() {
     }
   }
 
+  const hasAnyVisibleNotification =
+    notifications.length > 0 || unreadChatCount > 0;
+
   return (
     <>
       <button
@@ -157,7 +226,11 @@ export function NotificationBell() {
         type="button"
       >
         {unreadCount > 0 ? (
-          <BellRing aria-hidden="true" className="text-amber-light" size={19} />
+          <BellRing
+            aria-hidden="true"
+            className="text-amber-light"
+            size={19}
+          />
         ) : (
           <Bell aria-hidden="true" size={19} />
         )}
@@ -170,7 +243,7 @@ export function NotificationBell() {
       </button>
 
       <PixelModal
-        description="Přehled novinek ze sessions, útrat, dluhů, plateb a herní knihovny."
+        description="Přehled novinek ze sessions, útrat, dluhů, herní knihovny a party chatu."
         onClose={() => setIsOpen(false)}
         open={isOpen}
         size="lg"
@@ -238,7 +311,15 @@ export function NotificationBell() {
             </div>
           ) : null}
 
-          {!isLoading && !error && notifications.length === 0 ? (
+          {!isLoading && !error && unreadChatCount > 0 ? (
+            <ChatUnreadSummary
+              latestMessage={latestUnreadChatMessage}
+              onNavigate={() => setIsOpen(false)}
+              unreadChatCount={unreadChatCount}
+            />
+          ) : null}
+
+          {!isLoading && !error && !hasAnyVisibleNotification ? (
             <div className="grid min-h-44 place-items-center border-2 border-outline bg-panel-deep p-6 text-center">
               <div>
                 <Bell
@@ -252,8 +333,8 @@ export function NotificationBell() {
                 </p>
 
                 <p className="mt-3 text-sm leading-6 text-cream-muted">
-                  Až někdo vytvoří session, přidá útratu nebo potvrdí platbu,
-                  zpráva se objeví tady.
+                  Až někdo vytvoří session, přidá útratu, pošle zprávu nebo
+                  potvrdí platbu, objeví se to tady.
                 </p>
               </div>
             </div>
@@ -263,12 +344,12 @@ export function NotificationBell() {
             <div className="max-h-112 overflow-y-auto border-2 border-outline shadow-pixel-sm">
               {notifications.map((notification, index) => (
                 <div
-                  key={notification.id}
                   className={
                     index === notifications.length - 1
                       ? "[&>a]:border-b-0"
                       : ""
                   }
+                  key={notification.id}
                 >
                   <NotificationItem
                     notification={notification}

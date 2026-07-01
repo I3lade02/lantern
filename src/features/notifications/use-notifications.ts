@@ -14,13 +14,16 @@ import {
 
 import { firestoreDb } from "@/firebase/firestore";
 import type { ActivityLogEntry } from "@/types/activity";
+import {
+  CHAT_RECENT_MESSAGE_LIMIT,
+  CHAT_ROOM_ID,
+  type ChatMessage,
+} from "@/types/chat";
 import type {
   InAppNotification,
   NotificationIconKind,
   NotificationState,
 } from "@/types/notification";
-
-type NotificationsStatus = "loading" | "ready" | "error";
 
 function snapshotToActivity(
   snapshot: QueryDocumentSnapshot<DocumentData>,
@@ -29,6 +32,15 @@ function snapshotToActivity(
     id: snapshot.id,
     ...snapshot.data(),
   } as ActivityLogEntry;
+}
+
+function snapshotToChatMessage(
+  snapshot: QueryDocumentSnapshot<DocumentData>,
+): ChatMessage {
+  return {
+    id: snapshot.id,
+    ...snapshot.data(),
+  } as ChatMessage;
 }
 
 function getNotificationPresentation(activity: ActivityLogEntry): {
@@ -137,21 +149,50 @@ function getNotificationPresentation(activity: ActivityLogEntry): {
   }
 }
 
+function isNewerThanLastSeen(
+  timestampMilliseconds: number,
+  lastSeenMilliseconds: number | null,
+): boolean {
+  return (
+    lastSeenMilliseconds !== null &&
+    timestampMilliseconds > lastSeenMilliseconds
+  );
+}
+
 export function useNotifications(
   userId: string | null,
   enabled: boolean,
 ) {
-  const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
+  const [activities, setActivities] = useState<
+    ActivityLogEntry[]
+  >([]);
+
+  const [chatMessages, setChatMessages] = useState<
+    ChatMessage[]
+  >([]);
+
   const [notificationState, setNotificationState] =
     useState<NotificationState | null>(null);
 
   const [activitiesLoadedForUserId, setActivitiesLoadedForUserId] =
     useState<string | null>(null);
 
+  const [chatLoadedForUserId, setChatLoadedForUserId] =
+    useState<string | null>(null);
+
   const [stateLoadedForUserId, setStateLoadedForUserId] =
     useState<string | null>(null);
 
-  const [error, setError] = useState<string | null>(null);
+  const [activityError, setActivityError] =
+    useState<string | null>(null);
+
+  const [chatError, setChatError] = useState<string | null>(
+    null,
+  );
+
+  const [stateError, setStateError] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!enabled || !userId) {
@@ -175,7 +216,7 @@ export function useNotifications(
 
         setActivities(snapshot.docs.map(snapshotToActivity));
         setActivitiesLoadedForUserId(userId);
-        setError(null);
+        setActivityError(null);
       },
       (snapshotError) => {
         if (!isActive) {
@@ -189,7 +230,48 @@ export function useNotifications(
 
         setActivities([]);
         setActivitiesLoadedForUserId(userId);
-        setError("Notifikace se nepodařilo načíst.");
+        setActivityError("Notifikace se nepodařilo načíst.");
+      },
+    );
+
+    const chatQuery = query(
+      collection(
+        firestoreDb,
+        "chatRooms",
+        CHAT_ROOM_ID,
+        "messages",
+      ),
+      orderBy("createdAt", "desc"),
+      limit(CHAT_RECENT_MESSAGE_LIMIT),
+    );
+
+    const unsubscribeChat = onSnapshot(
+      chatQuery,
+      (snapshot) => {
+        if (!isActive) {
+          return;
+        }
+
+        setChatMessages(
+          snapshot.docs.map(snapshotToChatMessage),
+        );
+
+        setChatLoadedForUserId(userId);
+        setChatError(null);
+      },
+      (snapshotError) => {
+        if (!isActive) {
+          return;
+        }
+
+        console.error(
+          "Nepodařilo se načíst stav party chatu:",
+          snapshotError,
+        );
+
+        setChatMessages([]);
+        setChatLoadedForUserId(userId);
+        setChatError("Stav party chatu se nepodařilo načíst.");
       },
     );
 
@@ -218,6 +300,7 @@ export function useNotifications(
         );
 
         setStateLoadedForUserId(userId);
+        setStateError(null);
       },
       (snapshotError) => {
         if (!isActive) {
@@ -231,7 +314,10 @@ export function useNotifications(
 
         setNotificationState(null);
         setStateLoadedForUserId(userId);
-        setError("Stav notifikací se nepodařilo načíst.");
+
+        setStateError(
+          "Stav notifikací se nepodařilo načíst.",
+        );
       },
     );
 
@@ -239,23 +325,29 @@ export function useNotifications(
       isActive = false;
 
       unsubscribeActivities();
+      unsubscribeChat();
       unsubscribeState();
     };
   }, [enabled, userId]);
 
   const isLoadedForCurrentUser =
     activitiesLoadedForUserId === userId &&
+    chatLoadedForUserId === userId &&
     stateLoadedForUserId === userId;
 
   const lastSeenAtMilliseconds =
     notificationState?.lastSeenAt?.toMillis() ?? null;
+
+  const lastSeenChatAtMilliseconds =
+    notificationState?.lastSeenChatAt?.toMillis() ?? null;
 
   const notifications: InAppNotification[] = activities
     .filter((activity) => activity.actorId !== userId)
     .map((activity) => {
       const presentation = getNotificationPresentation(activity);
 
-      const activityMilliseconds = activity.createdAt?.toMillis() ?? 0;
+      const activityMilliseconds =
+        activity.createdAt?.toMillis() ?? 0;
 
       return {
         id: activity.id,
@@ -267,29 +359,70 @@ export function useNotifications(
         actorName: activity.actorName,
         sessionId: activity.sessionId,
         createdAt: activity.createdAt,
-        isUnread:
-          lastSeenAtMilliseconds !== null &&
-          activityMilliseconds > lastSeenAtMilliseconds,
+        isUnread: isNewerThanLastSeen(
+          activityMilliseconds,
+          lastSeenAtMilliseconds,
+        ),
       };
     });
 
-  const unreadCount = notifications.filter(
+  const unreadActivityCount = notifications.filter(
     (notification) => notification.isUnread,
   ).length;
 
-  const status: NotificationsStatus =
-    error
-      ? "error"
-      : isLoadedForCurrentUser
-        ? "ready"
-        : "loading";
+  const unreadChatMessages = chatMessages.filter((message) => {
+    if (
+      message.isDeleted ||
+      message.authorId === userId
+    ) {
+      return false;
+    }
+
+    const messageMilliseconds =
+      message.createdAt?.toMillis() ?? 0;
+
+    return isNewerThanLastSeen(
+      messageMilliseconds,
+      lastSeenChatAtMilliseconds,
+    );
+  });
+
+  const unreadChatCount = unreadChatMessages.length;
+
+  const latestUnreadChatMessage =
+    unreadChatMessages[0] ?? null;
+
+  const unreadCount =
+    unreadActivityCount + unreadChatCount;
+
+  const error =
+    activityError ?? chatError ?? stateError;
+
+  const shouldExposeData =
+    enabled && isLoadedForCurrentUser;
 
   return {
-    notifications:
-      enabled && isLoadedForCurrentUser ? notifications : [],
-    unreadCount:
-      enabled && isLoadedForCurrentUser ? unreadCount : 0,
-    isLoading: enabled && status === "loading",
-    error: enabled && isLoadedForCurrentUser ? error : null,
+    notifications: shouldExposeData ? notifications : [],
+
+    unreadActivityCount: shouldExposeData
+      ? unreadActivityCount
+      : 0,
+
+    unreadChatCount: shouldExposeData
+      ? unreadChatCount
+      : 0,
+
+    unreadCount: shouldExposeData ? unreadCount : 0,
+
+    hasUnreadChat:
+      shouldExposeData && unreadChatCount > 0,
+
+    latestUnreadChatMessage: shouldExposeData
+      ? latestUnreadChatMessage
+      : null,
+
+    isLoading: enabled && !isLoadedForCurrentUser,
+
+    error: shouldExposeData ? error : null,
   };
 }

@@ -13,6 +13,7 @@ import { useAuth } from "@/features/auth/auth-provider";
 import { signOutUser } from "@/features/auth/auth-service";
 import { APP_NAVIGATION } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { useNotificationsContext } from "@/features/notifications/notifications-provider";
 
 function isNavigationItemActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -22,6 +23,7 @@ export function SidebarNav() {
   const pathname = usePathname();
   const { profile, user } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const { hasUnreadChat } = useNotificationsContext();
 
   const displayName =
     profile?.displayName ||
@@ -77,6 +79,7 @@ export function SidebarNav() {
           {APP_NAVIGATION.map((item) => {
             const Icon = item.icon;
             const isActive = isNavigationItemActive(pathname, item.href);
+            const showChatBadge = item.href === "/chat" && hasUnreadChat;
 
             return (
               <Link
@@ -97,6 +100,19 @@ export function SidebarNav() {
               >
                 <Icon aria-hidden="true" size={17} />
                 <span>{item.label}</span>
+                {showChatBadge ? (
+                  <span
+                    aria-label="Nové zprávy v chatu"
+                    className={[
+                      "ml-auto size-2 shrink-0 border border-outline",
+                      isActive ? "bg-wine" : "bg-amber",
+                    ].join(" ")}
+                  >
+                    <span className="sr-only">
+                      Nové zprávy v chatu
+                    </span>
+                  </span>
+                ) : null}
               </Link>
             );
           })}

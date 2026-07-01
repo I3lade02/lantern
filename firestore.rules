@@ -1276,40 +1276,127 @@ function isValidGameUpdate(gameId) {
     && request.resource.data.updatedAt == request.time;
 }
 
+function hasLastSeenAt(data) {
+  return data.keys().hasAll([
+    "lastSeenAt"
+  ]);
+}
+
+function hasLastSeenChatAt(data) {
+  return data.keys().hasAll([
+    "lastSeenChatAt"
+  ]);
+}
+
 function hasValidNotificationStateShape(data) {
   return data.keys().hasAll([
       "id",
-      "lastSeenAt",
       "updatedAt"
     ])
     && data.keys().hasOnly([
       "id",
       "lastSeenAt",
+      "lastSeenChatAt",
       "updatedAt"
     ])
     && data.id == "main"
-    && data.lastSeenAt is timestamp
-    && data.updatedAt is timestamp;
+    && data.updatedAt is timestamp
+    && (
+      !hasLastSeenAt(data)
+      || data.lastSeenAt is timestamp
+    )
+    && (
+      !hasLastSeenChatAt(data)
+      || data.lastSeenChatAt is timestamp
+    )
+    && (
+      hasLastSeenAt(data)
+      || hasLastSeenChatAt(data)
+    );
+}
+
+function isValidNotificationStateCreate(stateId) {
+  return stateId == "main"
+    && hasValidNotificationStateShape(request.resource.data)
+    && request.resource.data.updatedAt == request.time
+    && (
+      !hasLastSeenAt(request.resource.data)
+      || request.resource.data.lastSeenAt == request.time
+    )
+    && (
+      !hasLastSeenChatAt(request.resource.data)
+      || request.resource.data.lastSeenChatAt == request.time
+    );
+}
+
+function preservesOrSetsLastSeenAt() {
+  return (
+    !hasLastSeenAt(resource.data)
+    && (
+      !hasLastSeenAt(request.resource.data)
+      || request.resource.data.lastSeenAt == request.time
+    )
+  ) || (
+    hasLastSeenAt(resource.data)
+    && hasLastSeenAt(request.resource.data)
+    && (
+      request.resource.data.lastSeenAt == resource.data.lastSeenAt
+      || request.resource.data.lastSeenAt == request.time
+    )
+  );
+}
+
+function preservesOrSetsLastSeenChatAt() {
+  return (
+    !hasLastSeenChatAt(resource.data)
+    && (
+      !hasLastSeenChatAt(request.resource.data)
+      || request.resource.data.lastSeenChatAt == request.time
+    )
+  ) || (
+    hasLastSeenChatAt(resource.data)
+    && hasLastSeenChatAt(request.resource.data)
+    && (
+      request.resource.data.lastSeenChatAt
+        == resource.data.lastSeenChatAt
+      || request.resource.data.lastSeenChatAt == request.time
+    )
+  );
+}
+
+function isValidNotificationStateUpdate(stateId) {
+  return stateId == "main"
+    && hasValidNotificationStateShape(resource.data)
+    && hasValidNotificationStateShape(request.resource.data)
+    && request.resource.data.updatedAt == request.time
+    && preservesOrSetsLastSeenAt()
+    && preservesOrSetsLastSeenChatAt()
+    && request.resource.data
+      .diff(resource.data)
+      .affectedKeys()
+      .hasOnly([
+        "lastSeenAt",
+        "lastSeenChatAt",
+        "updatedAt"
+      ]);
 }
 
 function isValidOwnNotificationStateWrite(userId, stateId) {
+  let notificationStatePath =
+    /databases/$(database)/documents/users/$(userId)/notificationState/$(stateId);
+
   return hasApprovedEmail()
     && request.auth.uid == userId
     && stateId == "main"
-    && hasValidNotificationStateShape(request.resource.data)
-    && request.resource.data.lastSeenAt == request.time
-    && request.resource.data.updatedAt == request.time
     && (
-      !exists(
-        /databases/$(database)/documents/users/$(userId)/notificationState/$(stateId)
+      (
+        !exists(notificationStatePath)
+        && isValidNotificationStateCreate(stateId)
       )
-      || request.resource.data
-        .diff(resource.data)
-        .affectedKeys()
-        .hasOnly([
-          "lastSeenAt",
-          "updatedAt"
-        ])
+      || (
+        exists(notificationStatePath)
+        && isValidNotificationStateUpdate(stateId)
+      )
     );
 }
 
