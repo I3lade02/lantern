@@ -1566,6 +1566,30 @@ match /joinRequests/{requestId} {
   allow update, delete: if false;
 }
 
+match /diceRolls/{rollId} {
+  allow get, list: if hasApprovedEmail();
+
+  allow create: if isValidDiceRollCreate(rollId);
+
+  allow update, delete: if false;
+}
+
+match /drinks/{drinkId} {
+  allow read, write: if false;
+}
+
+match /barConfig/{configId} {
+  allow read, write: if false;
+}
+
+match /barClaims/{claimId} {
+  allow read, write: if false;
+}
+
+match /{document=**} {
+  allow read, write: if false;
+}
+
     match /payments/{paymentId} {
       allow get, list: if hasApprovedEmail();
 

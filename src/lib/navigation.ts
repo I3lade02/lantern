@@ -9,6 +9,7 @@ import {
   UsersRound,
   Vote,
   MessageCircleMore,
+  Beer,
 } from "lucide-react";
 
 export type AppNavigationItem = {
@@ -48,6 +49,12 @@ export const APP_NAVIGATION: AppNavigationItem[] = [
     label: "Útraty",
     shortLabel: "Útraty",
     icon: ReceiptText,
+  },
+  {
+    href: "/bar",
+    label: "Bar",
+    shortLabel: "Bar",
+    icon: Beer,
   },
   {
     href: "/debts",
