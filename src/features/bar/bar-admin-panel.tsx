@@ -35,6 +35,7 @@ import {
   saveBarOperator,
   updateBarDrink,
 } from "@/features/bar/bar-admin-api";
+import { getBarScanUrl } from "@/features/bar/bar-qr-url";
 import { useMembers } from "@/features/members/use-members";
 import { formatCzkFromCents } from "@/lib/money";
 import {
@@ -95,15 +96,6 @@ function parsePriceInput(
   }
 
   return Math.round(numericValue * 100);
-}
-
-function getScanUrl(qrToken: string): string {
-  const origin =
-    typeof window === "undefined"
-      ? "https://lantern.quest"
-      : window.location.origin;
-
-  return `${origin}/bar/scan/${qrToken}`;
 }
 
 type DrinkEditorProps = {
@@ -305,7 +297,7 @@ function DrinkQrModal({
   drink,
   onClose,
 }: DrinkQrModalProps) {
-  const scanUrl = getScanUrl(drink.qrToken);
+  const scanUrl = getBarScanUrl(drink.qrToken);
 
   async function copyScanUrl() {
     try {
