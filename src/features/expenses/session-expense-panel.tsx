@@ -9,6 +9,7 @@ import { PixelPanel } from "@/components/ui/pixel-panel";
 import { useAuth } from "@/features/auth/auth-provider";
 import { ExpenseForm } from "@/features/expenses/expense-form";
 import { ExpenseList } from "@/features/expenses/expense-list";
+import { ExpenseMemberTotals } from "@/features/expenses/expense-member-totals";
 import { useExpenses } from "@/features/expenses/use-expenses";
 import type { Expense } from "@/types/expense";
 
@@ -45,7 +46,8 @@ export function SessionExpensesPanel({
     { sessionId },
   );
 
-  const [modalState, setModalState] = useState<ModalState>(null);
+  const [modalState, setModalState] =
+    useState<ModalState>(null);
 
   const isAdmin = profile?.role === "admin";
 
@@ -67,7 +69,9 @@ export function SessionExpensesPanel({
           EXPENSE ERROR
         </p>
 
-        <p className="mt-3 text-sm leading-6 text-cream-muted">{error}</p>
+        <p className="mt-3 text-sm leading-6 text-cream-muted">
+          {error}
+        </p>
       </PixelPanel>
     );
   }
@@ -89,19 +93,30 @@ export function SessionExpensesPanel({
         </PixelButton>
       </div>
 
-      <ExpenseList
-        actor={actor}
-        emptyDescription={`Pro session „${sessionTitle}“ zatím nikdo nezapsal žádnou útratu.`}
-        emptyTitle="Session pokladna je zatím prázdná"
-        expenses={expenses}
-        isAdmin={isAdmin}
-        onEdit={(expense) =>
-          setModalState({
-            mode: "edit",
-            expense,
-          })
-        }
-      />
+      {expenses.length > 0 ? (
+        <ExpenseMemberTotals
+          currentUserId={user?.uid ?? null}
+          description="Součet vychází z rozepsaných podílů u jednotlivých útrat, takže správně započítá i rozdělené položky a QR nápoje z baru."
+          expenses={expenses}
+          title="Součet útrat v této session"
+        />
+      ) : null}
+
+      <div className={expenses.length > 0 ? "mt-6" : ""}>
+        <ExpenseList
+          actor={actor}
+          emptyDescription={`Pro session „${sessionTitle}“ zatím nikdo nezapsal žádnou útratu.`}
+          emptyTitle="Session pokladna je zatím prázdná"
+          expenses={expenses}
+          isAdmin={isAdmin}
+          onEdit={(expense) =>
+            setModalState({
+              mode: "edit",
+              expense,
+            })
+          }
+        />
+      </div>
 
       {modalState?.mode === "create" ? (
         <ExpenseForm

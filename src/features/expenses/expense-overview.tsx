@@ -9,6 +9,7 @@ import { PixelPanel } from "@/components/ui/pixel-panel";
 import { useAuth } from "@/features/auth/auth-provider";
 import { ExpenseForm } from "@/features/expenses/expense-form";
 import { ExpenseList } from "@/features/expenses/expense-list";
+import { ExpenseMemberTotals } from "@/features/expenses/expense-member-totals";
 import { useExpenses } from "@/features/expenses/use-expenses";
 import { useSessions } from "@/features/sessions/use-sessions";
 import {
@@ -44,7 +45,8 @@ export function ExpenseOverview() {
 
   const { sessions } = useSessions(profileStatus === "ready");
 
-  const [modalState, setModalState] = useState<ExpenseModalState>(null);
+  const [modalState, setModalState] =
+    useState<ExpenseModalState>(null);
 
   const isAdmin = profile?.role === "admin";
 
@@ -56,7 +58,13 @@ export function ExpenseOverview() {
     : null;
 
   const sessionTitles = useMemo(
-    () => new Map(sessions.map((session) => [session.id, session.title])),
+    () =>
+      new Map(
+        sessions.map((session) => [
+          session.id,
+          session.title,
+        ]),
+      ),
     [sessions],
   );
 
@@ -75,7 +83,9 @@ export function ExpenseOverview() {
           Útraty se nepodařilo načíst
         </h2>
 
-        <p className="mt-3 text-sm leading-6 text-cream-muted">{error}</p>
+        <p className="mt-3 text-sm leading-6 text-cream-muted">
+          {error}
+        </p>
 
         <PixelButton
           className="mt-6"
@@ -123,22 +133,24 @@ export function ExpenseOverview() {
           </p>
 
           <div className="mt-3 flex flex-wrap gap-3">
-            {Object.entries(EXPENSE_PRESETS).map(([key, preset]) => (
-              <PixelButton
-                key={key}
-                onClick={() =>
-                  setModalState({
-                    mode: "create",
-                    preset,
-                  })
-                }
-                size="sm"
-                variant="ghost"
-              >
-                <ReceiptText aria-hidden="true" size={14} />
-                {preset.title}
-              </PixelButton>
-            ))}
+            {Object.entries(EXPENSE_PRESETS).map(
+              ([key, preset]) => (
+                <PixelButton
+                  key={key}
+                  onClick={() =>
+                    setModalState({
+                      mode: "create",
+                      preset,
+                    })
+                  }
+                  size="sm"
+                  variant="ghost"
+                >
+                  <ReceiptText aria-hidden="true" size={14} />
+                  {preset.title}
+                </PixelButton>
+              ),
+            )}
 
             <PixelButton
               onClick={() => setModalState({ mode: "create" })}
@@ -151,6 +163,15 @@ export function ExpenseOverview() {
           </div>
         </div>
       </PixelPanel>
+
+      {expenses.length > 0 ? (
+        <ExpenseMemberTotals
+          currentUserId={user?.uid ?? null}
+          description="Přehled ukazuje, kolik má každý člen dohromady připsáno v aktuálně načtených útratách."
+          expenses={expenses}
+          title="Součet útrat podle členů"
+        />
+      ) : null}
 
       <section>
         <p className="mb-3 font-pixel text-[9px] leading-5 text-cream-muted">
