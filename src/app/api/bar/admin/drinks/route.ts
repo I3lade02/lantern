@@ -7,6 +7,7 @@ import {
   BarServerRequestError,
   createQrToken,
   parseAvailability,
+  parseDrinkImageUrl,
   parseDrinkCategory,
   parsePriceCents,
   parseRequiredText,
@@ -23,6 +24,7 @@ type CreateDrinkBody = {
   name?: unknown;
   priceCents?: unknown;
   category?: unknown;
+  imageUrl?: unknown;
   isAvailable?: unknown;
 };
 
@@ -76,6 +78,10 @@ export async function POST(request: Request) {
       body.category,
     );
 
+    const imageUrl = parseDrinkImageUrl(
+      body.imageUrl,
+    );
+
     const isAvailable = parseAvailability(
       body.isAvailable,
     );
@@ -94,6 +100,7 @@ export async function POST(request: Request) {
       name,
       priceCents,
       category,
+      imageUrl,
 
       qrToken,
       isAvailable,
@@ -109,6 +116,7 @@ export async function POST(request: Request) {
           name,
           priceCents,
           category,
+          imageUrl,
           qrToken,
           isAvailable,
         },

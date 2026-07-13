@@ -7,6 +7,7 @@ import {
   BarServerRequestError,
   parseAvailability,
   parseDocumentId,
+  parseDrinkImageUrl,
   parseDrinkCategory,
   parsePriceCents,
   parseRequiredText,
@@ -30,6 +31,7 @@ type UpdateDrinkBody = {
   name?: unknown;
   priceCents?: unknown;
   category?: unknown;
+  imageUrl?: unknown;
   isAvailable?: unknown;
 };
 
@@ -83,6 +85,7 @@ export async function PATCH(
       body.name !== undefined ||
       body.priceCents !== undefined ||
       body.category !== undefined ||
+      body.imageUrl !== undefined ||
       body.isAvailable !== undefined;
 
     if (!hasAnyChange) {
@@ -131,6 +134,11 @@ export async function PATCH(
         ? currentDrink.category
         : parseDrinkCategory(body.category);
 
+    const imageUrl =
+      body.imageUrl === undefined
+        ? currentDrink.imageUrl
+        : parseDrinkImageUrl(body.imageUrl);
+
     const isAvailable =
       body.isAvailable === undefined
         ? currentDrink.isAvailable
@@ -140,6 +148,7 @@ export async function PATCH(
       name,
       priceCents,
       category,
+      imageUrl,
       isAvailable,
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -150,6 +159,7 @@ export async function PATCH(
         name,
         priceCents,
         category,
+        imageUrl,
         qrToken: currentDrink.qrToken,
         isAvailable,
       },

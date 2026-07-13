@@ -28,6 +28,7 @@ export type Drink = {
   name: string;
   priceCents: number;
   category: DrinkCategory;
+  imageUrl: string | null;
 
   qrToken: string;
   isAvailable: boolean;
@@ -70,6 +71,7 @@ export type BarAdminDrink = {
   name: string;
   priceCents: number;
   category: DrinkCategory;
+  imageUrl: string | null;
 
   qrToken: string;
   isAvailable: boolean;
@@ -93,6 +95,7 @@ export type BarDrinkInput = {
   name: string;
   priceCents: number;
   category: DrinkCategory;
+  imageUrl: string | null;
   isAvailable: boolean;
 };
 
