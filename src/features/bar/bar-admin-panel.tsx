@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   Pencil,
   Plus,
+  Printer,
   QrCode,
   RefreshCw,
   Save,
@@ -124,6 +125,10 @@ function DrinkEditor({
       drink?.category ?? "lemonade",
     );
 
+  const [imageUrl, setImageUrl] = useState(
+    drink?.imageUrl ?? "",
+  );
+
   const [isAvailable, setIsAvailable] = useState(
     drink?.isAvailable ?? true,
   );
@@ -159,6 +164,7 @@ function DrinkEditor({
         name: name.trim(),
         priceCents,
         category,
+        imageUrl: imageUrl.trim() || null,
         isAvailable,
       });
 
@@ -233,6 +239,25 @@ function DrinkEditor({
             ))}
           </select>
         </label>
+
+        <div className="grid gap-2">
+          <PixelInput
+            id="bar-drink-image"
+            label="Obrázek nápoje (volitelné)"
+            maxLength={500}
+            onChange={(event) =>
+              setImageUrl(event.target.value)
+            }
+            placeholder="/drinks/cola.png nebo https://…"
+            value={imageUrl}
+          />
+
+          <p className="text-xs leading-5 text-cream-muted">
+            Použij obrázek z adresáře public nebo HTTPS
+            odkaz. Bez obrázku se vytiskne pixelová
+            ilustrace podle kategorie.
+          </p>
+        </div>
 
         <label className="flex items-center gap-3 border-2 border-outline bg-panel-deep p-4">
           <input
@@ -535,6 +560,7 @@ export function BarAdminPanel({
         name: drink.name,
         priceCents: drink.priceCents,
         category: drink.category,
+        imageUrl: drink.imageUrl,
         isAvailable: !drink.isAvailable,
       });
 
@@ -580,6 +606,14 @@ export function BarAdminPanel({
             >
                 <ScanLine aria-hidden="true" size={15} />
                 Skenovat QR
+            </Link>
+
+            <Link
+              className="inline-flex items-center justify-center gap-2 border-2 border-outline bg-amber px-4 py-3 font-pixel text-[9px] text-void shadow-pixel-sm transition hover:brightness-110"
+              href="/bar/print"
+            >
+              <Printer aria-hidden="true" size={15} />
+              Tisk nabídky
             </Link>
 
             <PixelButton

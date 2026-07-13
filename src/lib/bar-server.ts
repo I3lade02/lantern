@@ -107,6 +107,53 @@ export function parseAvailability(
   return value;
 }
 
+export function parseDrinkImageUrl(
+  value: unknown,
+): string | null {
+  if (
+    value === undefined ||
+    value === null ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  if (typeof value !== "string") {
+    throw new BarServerRequestError(
+      "Obrázek nápoje musí být odkaz.",
+    );
+  }
+
+  const normalizedValue = value.trim();
+
+  if (normalizedValue.length > 500) {
+    throw new BarServerRequestError(
+      "Odkaz na obrázek může mít maximálně 500 znaků.",
+    );
+  }
+
+  if (
+    normalizedValue.startsWith("/") &&
+    !normalizedValue.startsWith("//")
+  ) {
+    return normalizedValue;
+  }
+
+  try {
+    const url = new URL(normalizedValue);
+
+    if (url.protocol !== "https:") {
+      throw new Error("Unsupported protocol");
+    }
+
+    return url.toString();
+  } catch {
+    throw new BarServerRequestError(
+      "Použij cestu začínající / nebo platný HTTPS odkaz na obrázek.",
+    );
+  }
+}
+
 export function parseStoredDrink(
   drinkId: string,
   data: Record<string, unknown>,
@@ -126,6 +173,10 @@ export function parseStoredDrink(
     data.category,
   );
 
+  const imageUrl = parseDrinkImageUrl(
+    data.imageUrl,
+  );
+
   const qrToken = parseRequiredText(
     data.qrToken,
     "QR token",
@@ -142,6 +193,7 @@ export function parseStoredDrink(
     name,
     priceCents,
     category,
+    imageUrl,
     qrToken,
     isAvailable,
   };
